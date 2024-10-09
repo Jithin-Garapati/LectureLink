@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
-import { AudioRecorder } from 'react-audio-voice-recorder'
-import axios from 'axios'
-import { format } from 'date-fns'
-import Link from 'next/link'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useState, useEffect, useCallback } from 'react';
+import { useForm } from 'react-hook-form';
+import { AudioRecorder } from 'react-audio-voice-recorder';
+import axios from 'axios';
+import { format } from 'date-fns';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from '@/components/ui/select';
 import {
   Form,
   FormControl,
@@ -22,162 +22,169 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { useToast } from "@/hooks/use-toast"
-import { Toaster } from "@/components/ui/toaster"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import * as z from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Checkbox } from "@/components/ui/checkbox"
-import { X } from 'lucide-react'  // Import the X icon
+} from '@/components/ui/form';
+import { useToast } from '@/hooks/use-toast';
+import { Toaster } from '@/components/ui/toaster';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import * as z from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Checkbox } from '@/components/ui/checkbox';
+import { X } from 'lucide-react';  // Import the X icon
 
 interface Subject {
-  id: string
-  name: string
+  id: string;
+  name: string;
 }
 
 interface Lecture {
-  id: string
-  subject_id: string
-  heading: string
-  subject_tag: string
-  transcript: string
-  enhanced_notes: string
-  recorded_at: string
+  id: string;
+  subject_id: string;
+  heading: string;
+  subject_tag: string;
+  transcript: string;
+  enhanced_notes: string;
+  recorded_at: string;
 }
 
 const formSchema = z.object({
   name: z.string().min(1, {
-    message: "Subject name is required.",
+    message: 'Subject name is required.',
   }),
-})
+});
 
 export default function Home() {
-  const [subjects, setSubjects] = useState<Subject[]>([])
-  const [lectures, setLectures] = useState<Lecture[]>([])
-  const [filteredLectures, setFilteredLectures] = useState<Lecture[]>([])
-  const [selectedSubject, setSelectedSubject] = useState<string>('')
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([])
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const { toast } = useToast()
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [lectures, setLectures] = useState<Lecture[]>([]);
+  const [filteredLectures, setFilteredLectures] = useState<Lecture[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const { toast } = useToast();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
+      name: '',
     },
-  })
+  });
 
-  useEffect(() => {
-    fetchSubjects()
-    fetchLectures()
-  }, [])
-
-  useEffect(() => {
-    filterLectures()
-  }, [lectures, searchTerm, selectedSubjects, selectedTags])
-
-  const fetchSubjects = async () => {
+  // Fetch Subjects (Memoized using useCallback)
+  const fetchSubjects = useCallback(async () => {
     try {
-      const response = await axios.get<Subject[]>('/api/subjects')
-      setSubjects(response.data)
+      const response = await axios.get<Subject[]>('/api/subjects');
+      setSubjects(response.data);
     } catch (error) {
-      console.error('Error fetching subjects:', error)
+      console.error('Error fetching subjects:', error);
       toast({
-        title: "Error",
-        description: "Failed to fetch subjects. Please try again.",
-        variant: "destructive",
-      })
+        title: 'Error',
+        description: 'Failed to fetch subjects. Please try again.',
+        variant: 'destructive',
+      });
     }
-  }
+  }, [toast]);
 
-  const fetchLectures = async () => {
+  // Fetch Lectures (Memoized using useCallback)
+  const fetchLectures = useCallback(async () => {
     try {
-      const response = await axios.get<Lecture[]>('/api/lectures')
-      setLectures(response.data)
+      const response = await axios.get<Lecture[]>('/api/lectures');
+      setLectures(response.data);
     } catch (error) {
-      console.error('Error fetching lectures:', error)
+      console.error('Error fetching lectures:', error);
       toast({
-        title: "Error",
-        description: "Failed to fetch lectures. Please try again.",
-        variant: "destructive",
-      })
+        title: 'Error',
+        description: 'Failed to fetch lectures. Please try again.',
+        variant: 'destructive',
+      });
     }
-  }
+  }, [toast]);
 
-  const filterLectures = () => {
-    let filtered = lectures
+  // Filter Lectures (Memoized using useCallback)
+  const filterLectures = useCallback(() => {
+    let filtered = lectures;
 
     if (searchTerm) {
-      filtered = filtered.filter(lecture => 
-        lecture.heading.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lecture.subject_tag.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      filtered = filtered.filter(
+        (lecture) =>
+          lecture.heading.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          lecture.subject_tag.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
 
     if (selectedSubjects.length > 0) {
-      filtered = filtered.filter(lecture => selectedSubjects.includes(lecture.subject_id))
+      filtered = filtered.filter((lecture) =>
+        selectedSubjects.includes(lecture.subject_id)
+      );
     }
 
-    if (selectedTags.length > 0) {
-      filtered = filtered.filter(lecture => selectedTags.includes(lecture.subject_tag))
-    }
+    setFilteredLectures(filtered);
+  }, [lectures, searchTerm, selectedSubjects]);
 
-    setFilteredLectures(filtered)
-  }
+  // Fetch subjects and lectures on component mount
+  useEffect(() => {
+    fetchSubjects();
+    fetchLectures();
+  }, [fetchSubjects, fetchLectures]);
 
+  // Apply filtering when the lecture list or filters change
+  useEffect(() => {
+    filterLectures();
+  }, [lectures, searchTerm, selectedSubjects, filterLectures]);
+
+  // Handle Adding New Subject
   const onAddSubject = async (data: z.infer<typeof formSchema>) => {
     try {
-      await axios.post('/api/subjects', data)
-      fetchSubjects()
-      form.reset()
+      await axios.post('/api/subjects', data);
+      fetchSubjects();  // Refresh subject list after adding
+      form.reset();
       toast({
-        title: "Success",
-        description: "Subject added successfully.",
-      })
+        title: 'Success',
+        description: 'Subject added successfully.',
+      });
     } catch (error) {
-      console.error('Error adding subject:', error)
+      console.error('Error adding subject:', error);
       toast({
-        title: "Error",
-        description: "Failed to add subject. Please try again.",
-        variant: "destructive",
-      })
+        title: 'Error',
+        description: 'Failed to add subject. Please try again.',
+        variant: 'destructive',
+      });
     }
-  }
+  };
 
+  // Handle Audio Recording Completion
   const onRecordingComplete = (blob: Blob) => {
-    setAudioBlob(blob)
-  }
+    setAudioBlob(blob);
+  };
 
+  // Handle Saving the Lecture
   const onSaveLecture = async () => {
     if (!audioBlob || !selectedSubject) {
       toast({
-        title: "Error",
-        description: "Please select a subject and record audio before saving.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Please select a subject and record audio before saving.',
+        variant: 'destructive',
       });
       return;
     }
 
-    setIsProcessing(true)
+    setIsProcessing(true);
 
     try {
-      const formData = new FormData()
-      formData.append('audio', audioBlob, 'lecture.webm')
-      formData.append('subject_id', selectedSubject)
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'lecture.webm');
+      formData.append('subject_id', selectedSubject);
 
       const transcribeResponse = await axios.post<{ transcription: string; enhancedNotes: string }>('/api/transcribe', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      const { transcription, enhancedNotes } = transcribeResponse.data
+      });
+      const { transcription, enhancedNotes } = transcribeResponse.data;
 
-      const headingResponse = await axios.post('/api/generate-heading', { 
-        transcription, 
-        enhancedNotes 
-      })
-      const { heading, subjectTag } = headingResponse.data
+      const headingResponse = await axios.post('/api/generate-heading', {
+        transcription,
+        enhancedNotes,
+      });
+      const { heading, subjectTag } = headingResponse.data;
 
       const lectureData = {
         subject_id: selectedSubject,
@@ -186,51 +193,53 @@ export default function Home() {
         transcript: transcription,
         enhanced_notes: enhancedNotes,
         recorded_at: new Date().toISOString(),
-      }
+      };
 
-      await axios.post('/api/lectures', lectureData)
+      await axios.post('/api/lectures', lectureData);
 
-      fetchLectures()
-      setAudioBlob(null)
-      setSelectedSubject('')
+      fetchLectures();
+      setAudioBlob(null);
+      setSelectedSubject('');
       toast({
-        title: "Success",
-        description: "Lecture saved successfully.",
-      })
+        title: 'Success',
+        description: 'Lecture saved successfully.',
+      });
     } catch (error) {
-      console.error('Error saving lecture:', error)
+      console.error('Error saving lecture:', error);
       toast({
-        title: "Error",
-        description: "Failed to save lecture. Please try again.",
-        variant: "destructive",
-      })
+        title: 'Error',
+        description: 'Failed to save lecture. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
-  }
+  };
 
+  // Handle Deleting a Lecture
   const onDeleteLecture = async (lectureId: string) => {
     try {
-      await axios.delete(`/api/lectures/${lectureId}`)
-      fetchLectures()
+      await axios.delete(`/api/lectures/${lectureId}`);
+      fetchLectures();
       toast({
-        title: "Success",
-        description: "Lecture deleted successfully.",
-      })
+        title: 'Success',
+        description: 'Lecture deleted successfully.',
+      });
     } catch (error) {
-      console.error('Error deleting lecture:', error)
+      console.error('Error deleting lecture:', error);
       toast({
-        title: "Error",
-        description: "Failed to delete lecture. Please try again.",
-        variant: "destructive",
-      })
+        title: 'Error',
+        description: 'Failed to delete lecture. Please try again.',
+        variant: 'destructive',
+      });
     }
-  }
+  };
 
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-8">Lecture Recorder</h1>
 
+      {/* Add Subject Form */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Add Subject</CardTitle>
@@ -257,6 +266,7 @@ export default function Home() {
         </CardContent>
       </Card>
 
+      {/* Record Lecture */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Record Lecture</CardTitle>
@@ -281,10 +291,7 @@ export default function Home() {
                 onStartRecording={() => setAudioBlob(null)}
               />
               {audioBlob && (
-                <Button
-                  onClick={onSaveLecture}
-                  disabled={isProcessing}
-                >
+                <Button onClick={onSaveLecture} disabled={isProcessing}>
                   {isProcessing ? 'Processing...' : 'Save Lecture'}
                 </Button>
               )}
@@ -293,6 +300,7 @@ export default function Home() {
         </CardContent>
       </Card>
 
+      {/* Search and Filter Lectures */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Search and Filter Lectures</CardTitle>
@@ -312,11 +320,11 @@ export default function Home() {
                   id={`subject-${subject.id}`}
                   checked={selectedSubjects.includes(subject.id)}
                   onCheckedChange={(checked) => {
-                    setSelectedSubjects(prev =>
+                    setSelectedSubjects((prev) =>
                       checked
                         ? [...prev, subject.id]
-                        : prev.filter(id => id !== subject.id)
-                    )
+                        : prev.filter((id) => id !== subject.id)
+                    );
                   }}
                 />
                 <label htmlFor={`subject-${subject.id}`}>{subject.name}</label>
@@ -326,6 +334,7 @@ export default function Home() {
         </CardContent>
       </Card>
 
+      {/* Display Lectures */}
       <Card>
         <CardHeader>
           <CardTitle>Recorded Lectures</CardTitle>
@@ -333,14 +342,25 @@ export default function Home() {
         <CardContent>
           <ul className="space-y-4">
             {filteredLectures.map((lecture) => (
-              <li key={lecture.id} className="border-b pb-4 last:border-b-0 relative">
-                <Link href={`/lecture/${lecture.id}`} className="block hover:bg-gray-50 p-2 rounded">
-                  <h3 className="font-semibold text-lg">{lecture.heading || 'Untitled Lecture'}</h3>
+              <li
+                key={lecture.id}
+                className="border-b pb-4 last:border-b-0 relative"
+              >
+                <Link
+                  href={`/lecture/${lecture.id}`}
+                  className="block hover:bg-gray-50 p-2 rounded"
+                >
+                  <h3 className="font-semibold text-lg">
+                    {lecture.heading || 'Untitled Lecture'}
+                  </h3>
                   <p className="text-sm text-gray-500">
-                    Subject: {subjects.find(s => s.id === lecture.subject_id)?.name || 'Unknown Subject'}
+                    Subject:{' '}
+                    {subjects.find((s) => s.id === lecture.subject_id)?.name ||
+                      'Unknown Subject'}
                   </p>
                   <p className="text-sm text-gray-500">
-                    Tag: <span className="bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">
+                    Tag:{' '}
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">
                       {lecture.subject_tag || 'Untagged'}
                     </span>
                   </p>
@@ -365,5 +385,5 @@ export default function Home() {
 
       <Toaster />
     </div>
-  )
+  );
 }
