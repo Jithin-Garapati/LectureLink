@@ -288,7 +288,6 @@ export default function Home() {
             <div className="flex items-center space-x-4">
               <AudioRecorder
                 onRecordingComplete={onRecordingComplete}
-                onStartRecording={() => setAudioBlob(null)}
               />
               {audioBlob && (
                 <Button onClick={onSaveLecture} disabled={isProcessing}>
