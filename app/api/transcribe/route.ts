@@ -7,12 +7,6 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 // Utility function to split a buffer into chunks of specified size
 function splitBuffer(buffer: Buffer, maxSizeInBytes: number): Buffer[] {
   const chunks = [];
@@ -24,6 +18,9 @@ function splitBuffer(buffer: Buffer, maxSizeInBytes: number): Buffer[] {
   }
   return chunks;
 }
+
+export const runtime = 'nodejs'; // Using Node.js runtime (or 'edge' if you're using the Edge runtime)
+export const dynamic = 'force-dynamic'; // Optional: Specify dynamic behavior if needed
 
 export async function POST(req: NextRequest) {
   try {
