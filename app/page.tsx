@@ -30,6 +30,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { X } from 'lucide-react';  // Import the X icon
 import { createClientComponentClient, Session } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation';
+import { Share2 } from "lucide-react" // Add this import
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 const supabase = createClientComponentClient()
 
@@ -363,29 +371,28 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
-      {/* Header Section with Favicon Logo */}
+      {/* Mobile-optimized header */}
       <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
+        <div className="container mx-auto px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
             <div className="flex items-center space-x-2">
-              {/* You can add your logo here */}
-              <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg className="w-6 h-6 sm:w-8 sm:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 14l9-5-9-5-9 5 9 5z" />
                 <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
               </svg>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
                 LectureLink
               </h1>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center justify-end gap-2 sm:gap-6">
               {session ? (
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <span className="hidden sm:inline text-sm font-medium text-gray-600 dark:text-gray-400 truncate max-w-[150px]">
                     {session.user?.email}
                   </span>
                   <Button 
                     onClick={handleSignOut}
-                    className="px-3 py-1.5 border border-white text-white text-sm hover:bg-white hover:text-gray-900 dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-gray-900 transition-all"
+                    className="text-xs sm:text-sm px-3 py-1.5"
                   >
                     Sign out
                   </Button>
@@ -393,7 +400,7 @@ export default function Home() {
               ) : (
                 <Button 
                   onClick={handleSignIn}
-                  className="px-6 py-2 bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 transition-all"
+                  className="text-xs sm:text-sm px-3 py-1.5"
                 >
                   Sign in
                 </Button>
@@ -403,35 +410,45 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8 max-w-5xl">
+      <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-5xl">
         {session && (
-          <div className="space-y-8">
-            {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-6 mb-8">
-              <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg text-center">
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{subjects.length}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Subjects</p>
+          <div className="space-y-4 sm:space-y-8">
+            {/* Keep stats cards side by side but smaller on mobile */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-6">
+              <div className="p-2 sm:p-6 border border-gray-200 dark:border-gray-800 rounded-lg text-center">
+                <p className="text-lg sm:text-3xl font-bold text-gray-900 dark:text-white">
+                  {subjects.length}
+                </p>
+                <p className="text-[10px] sm:text-sm text-gray-600 dark:text-gray-400">
+                  Subjects
+                </p>
               </div>
-              <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg text-center">
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{lectures.length}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Lectures</p>
+              <div className="p-2 sm:p-6 border border-gray-200 dark:border-gray-800 rounded-lg text-center">
+                <p className="text-lg sm:text-3xl font-bold text-gray-900 dark:text-white">
+                  {lectures.length}
+                </p>
+                <p className="text-[10px] sm:text-sm text-gray-600 dark:text-gray-400">
+                  Lectures
+                </p>
               </div>
-              <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg text-center">
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              <div className="p-2 sm:p-6 border border-gray-200 dark:border-gray-800 rounded-lg text-center">
+                <p className="text-lg sm:text-3xl font-bold text-gray-900 dark:text-white">
                   {lectures.reduce((total, lecture) => total + (lecture.transcript?.length || 0) / 1000, 0).toFixed(1)}k
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Words Transcribed</p>
+                <p className="text-[10px] sm:text-sm text-gray-600 dark:text-gray-400">
+                  Words
+                </p>
               </div>
             </div>
 
-            {/* Add Subject Form - Centered and Simplified */}
+            {/* Mobile-optimized Add Subject form */}
             <Card className="border border-gray-200 dark:border-gray-800 shadow-lg">
-              <CardHeader className="text-center border-b border-gray-100 dark:border-gray-800">
-                <CardTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+              <CardHeader className="p-3 sm:p-6 text-center border-b border-gray-100 dark:border-gray-800">
+                <CardTitle className="text-lg sm:text-xl font-semibold">
                   Add New Subject
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-6 max-w-md mx-auto">
+              <CardContent className="p-3 sm:p-6">
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onAddSubject)} className="space-y-4">
                     <FormField
@@ -461,17 +478,18 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            {/* Record Lecture - Enhanced UI */}
+            {/* Mobile-optimized Record Lecture section */}
             <Card className="border border-gray-200 dark:border-gray-800 shadow-lg">
-              <CardHeader className="text-center border-b border-gray-100 dark:border-gray-800">
-                <CardTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+              <CardHeader className="p-3 sm:p-6 text-center border-b border-gray-100 dark:border-gray-800">
+                <CardTitle className="text-lg sm:text-xl font-semibold">
                   Record New Lecture
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-6 max-w-md mx-auto">
-                <div className="space-y-6">
+              <CardContent className="p-3 sm:p-6">
+                <div className="space-y-4">
+                  {/* Recording controls with better mobile spacing */}
                   <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                    <SelectTrigger className="w-full border-gray-300 dark:border-gray-700">
+                    <SelectTrigger className="w-full text-sm">
                       <SelectValue placeholder="Select Subject" />
                     </SelectTrigger>
                     <SelectContent>
@@ -486,21 +504,19 @@ export default function Home() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <div className="flex justify-center items-center gap-4">
-                    <div className="recording-controls">
-                      <AudioRecorder 
-                        onRecordingComplete={onRecordingComplete}
-                        audioTrackConstraints={{
-                          noiseSuppression: true,
-                          echoCancellation: true,
-                        }} 
-                      />
-                    </div>
+                  <div className="flex flex-col sm:flex-row items-center gap-3 justify-center">
+                    <AudioRecorder 
+                      onRecordingComplete={onRecordingComplete}
+                      audioTrackConstraints={{
+                        noiseSuppression: true,
+                        echoCancellation: true,
+                      }} 
+                    />
                     {audioBlob && (
                       <Button 
                         onClick={onSaveLecture} 
                         disabled={isProcessing}
-                        className="bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 transition-all disabled:opacity-50"
+                        className="w-full sm:w-auto text-sm"
                       >
                         {isProcessing ? 'Processing...' : 'Save Lecture'}
                       </Button>
@@ -510,51 +526,75 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            {/* Lectures Grid */}
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Lectures</h2>
+            {/* Mobile-optimized Lectures section */}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                  Your Lectures
+                </h2>
                 <Input
                   placeholder="Search lectures..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-xs border-gray-300 dark:border-gray-700"
+                  className="w-full sm:max-w-xs text-sm"
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
                 {filteredLectures.map((lecture) => (
                   <Link
                     key={lecture.id}
                     href={`/lecture/${lecture.id}`}
                     className="group relative block"
                   >
-                    <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-lg hover:shadow-xl transition-all duration-300 hover:border-gray-400 dark:hover:border-gray-600">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-gray-600 dark:group-hover:text-gray-300">
+                    <div className="p-3 sm:p-6 border border-gray-200 dark:border-gray-800 rounded-lg hover:shadow-xl transition-all">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="min-w-0">
+                          <h3 className="text-base sm:text-lg font-semibold truncate">
                             {lecture.heading || 'Untitled Lecture'}
                           </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">
                             {subjects.find(s => s.id === lecture.subject_id)?.name}
                           </p>
-                          <span className="inline-block px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm">
+                          <span className="inline-block px-2 py-0.5 mt-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full">
                             {lecture.subject_tag || 'Untagged'}
                           </span>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            onDeleteLecture(lecture.id);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              const shareUrl = `${window.location.origin}/shared/${lecture.id}`;
+                              const shareText = `📚 Check out these lecture notes from ${lecture.heading}! 
+🎓 Study together, learn better! 
+${shareUrl}`;
+                              
+                              navigator.clipboard.writeText(shareText);
+                              toast({
+                                title: "Share with your study buddies! 🚀",
+                                description: "Link copied to clipboard",
+                              });
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Share2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              onDeleteLecture(lecture.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                      <p className="mt-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                         {format(new Date(lecture.recorded_at), 'PPpp')}
                       </p>
                     </div>

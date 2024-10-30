@@ -7,8 +7,17 @@ import { format, parseISO } from 'date-fns'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from 'next/link'
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp, Share2, Copy, Link2 } from "lucide-react"
 import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { useToast } from "@/hooks/use-toast"
 
 // Import react-markdown and plugins for rendering math and formatted content
 import ReactMarkdown from 'react-markdown'
@@ -38,6 +47,8 @@ export default function LecturePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isTranscriptOpen, setIsTranscriptOpen] = useState(false)
+  const { toast } = useToast()
+  const [shareUrl, setShareUrl] = useState("")
 
   useEffect(() => {
     const fetchLectureAndSubject = async () => {
@@ -70,6 +81,13 @@ export default function LecturePage() {
     }
   }, [id])
 
+  useEffect(() => {
+    // Generate share URL when component mounts
+    if (typeof window !== 'undefined') {
+      setShareUrl(`${window.location.origin}/shared/${id}`)
+    }
+  }, [id])
+
   const formatDate = (dateString: string) => {
     try {
       const date = parseISO(dateString)
@@ -77,6 +95,22 @@ export default function LecturePage() {
     } catch (error) {
       console.error('Error parsing date:', error)
       return 'Invalid date'
+    }
+  }
+
+  const copyShareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      toast({
+        title: "Link copied!",
+        description: "Share this link with your classmates",
+      })
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Please try again",
+        variant: "destructive",
+      })
     }
   }
 
@@ -90,9 +124,49 @@ export default function LecturePage() {
 
   return (
     <div className="container mx-auto p-4">
-      <Link href="/">
-        <Button className="mb-4">← Back to Lectures</Button>
-      </Link>
+      <div className="flex justify-between items-center mb-4">
+        <Link href="/">
+          <Button>← Back to Lectures</Button>
+        </Link>
+        
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Share2 className="h-4 w-4" />
+              Share with Mates
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                Share with your study buddies 🎓
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center space-x-2">
+                <Input
+                  value={shareUrl}
+                  readOnly
+                  className="select-all font-mono text-sm"
+                />
+                <Button onClick={copyShareLink} type="submit">
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="text-sm text-muted-foreground space-y-2">
+                <p className="flex items-center gap-2">
+                  <Link2 className="h-4 w-4" />
+                  Anyone with this link can view these notes
+                </p>
+                <p className="flex items-center gap-2">
+                  <span role="img" aria-label="rocket">🚀</span>
+                  Share and study together!
+                </p>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       <Card>
         <CardHeader>
