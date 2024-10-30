@@ -45,14 +45,17 @@ export interface Database {
         Row: {
           id: string
           name: string
+          user_id: string
         }
         Insert: {
           id?: string
           name: string
+          user_id: string
         }
         Update: {
           id?: string
           name?: string
+          user_id?: string
         }
       }
     }
