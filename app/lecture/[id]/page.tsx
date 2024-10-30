@@ -7,6 +7,8 @@ import { format, parseISO } from 'date-fns'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from 'next/link'
+import { ChevronDown, ChevronUp } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 // Import react-markdown and plugins for rendering math and formatted content
 import ReactMarkdown from 'react-markdown'
@@ -35,6 +37,7 @@ export default function LecturePage() {
   const [subject, setSubject] = useState<Subject | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false)
 
   useEffect(() => {
     const fetchLectureAndSubject = async () => {
@@ -108,25 +111,63 @@ export default function LecturePage() {
             Recorded on: {formatDate(lecture.recorded_at)}
           </p>
 
-          <h3 className="font-semibold mt-4 mb-2">Transcript:</h3>
-          {/* Render markdown for transcript */}
-          <ReactMarkdown
-            className="whitespace-pre-wrap p-2 bg-gray-100 rounded text-sm mb-4"
-            remarkPlugins={[remarkMath]}
-            rehypePlugins={[rehypeKatex]}
+          <Collapsible
+            open={isTranscriptOpen}
+            onOpenChange={setIsTranscriptOpen}
+            className="space-y-2"
           >
-            {lecture.transcript}
-          </ReactMarkdown>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Transcript</h3>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-9 p-0">
+                  {isTranscriptOpen ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">Toggle transcript</span>
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+            
+            <div className="rounded-md border border-gray-200 bg-slate-50 p-4">
+              <div className={`${isTranscriptOpen ? '' : 'max-h-16 overflow-hidden relative'}`}>
+                <ReactMarkdown
+                  className="prose prose-sm max-w-none"
+                  remarkPlugins={[remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
+                >
+                  {lecture.transcript}
+                </ReactMarkdown>
+                {!isTranscriptOpen && (
+                  <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-slate-50 to-transparent" />
+                )}
+              </div>
+              <Button 
+                variant="ghost" 
+                onClick={() => setIsTranscriptOpen(!isTranscriptOpen)}
+                className="mt-2"
+              >
+                {isTranscriptOpen ? 'Show Less' : 'Read More'}
+              </Button>
+            </div>
+          </Collapsible>
 
-          <h3 className="font-semibold mt-4 mb-2">Enhanced Notes:</h3>
-          {/* Render markdown for enhanced notes */}
-          <ReactMarkdown
-            className="whitespace-pre-wrap p-2 bg-gray-100 rounded text-sm"
-            remarkPlugins={[remarkMath]}
-            rehypePlugins={[rehypeKatex]}
-          >
-            {lecture.enhanced_notes}
-          </ReactMarkdown>
+          <h3 className="font-semibold mt-6 mb-2">Enhanced Notes:</h3>
+          <div className="rounded-md border border-gray-200 bg-slate-50 p-4">
+            <ReactMarkdown
+              className="prose prose-sm max-w-none 
+                [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mt-6
+                [&>h2]:text-xl [&>h2]:font-semibold [&>h2]:mt-5
+                [&>h3]:text-lg [&>h3]:font-medium [&>h3]:mt-4
+                [&>h4]:mt-4 
+                [&>p]:mt-2"
+              remarkPlugins={[remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+            >
+              {lecture.enhanced_notes}
+            </ReactMarkdown>
+          </div>
         </CardContent>
       </Card>
     </div>

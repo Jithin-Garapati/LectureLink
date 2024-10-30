@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../lib/supabase';
 
 // GET all lectures, ordered by recorded_at
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get('userId');
+
+  if (!userId) {
+    return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+  }
+
   try {
     const { data, error } = await supabase
       .from('lectures')
       .select('*')
+      .eq('user_id', userId)
       .order('recorded_at', { ascending: false });
 
     if (error) {

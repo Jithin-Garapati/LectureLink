@@ -32,26 +32,35 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.from(await audioFile.arrayBuffer());
     const maxChunkSize = 25 * 1024 * 1024; // 25 MB
-
-    let transcriptionText = '';
-
-    // Split the buffer if it exceeds 25 MB
     const audioChunks = splitBuffer(buffer, maxChunkSize);
+    let transcriptionText = '';
+    
+    // Process chunks with error handling for each chunk
+    for (let i = 0; i < audioChunks.length; i++) {
+      try {
+        const chunk = audioChunks[i];
+        const chunkFile = new File([chunk], `audio_chunk_${i}.webm`, { type: 'audio/webm' });
+        
+        const transcription = await groq.audio.transcriptions.create({
+          file: chunkFile,
+          model: "whisper-large-v3-turbo",
+          response_format: "verbose_json"
+        });
 
-    // Process each chunk individually
-    for (const chunk of audioChunks) {
-      const chunkFile = new File([chunk], 'audio_chunk.webm', { type: 'audio/webm' });
-      const transcription = await groq.audio.transcriptions.create({
-        file: chunkFile,
-        model: "whisper-large-v3-turbo",
-        response_format: "verbose_json",
-      });
-
-      // Append each chunk's transcription text
-      transcriptionText += transcription.text;
+        transcriptionText += transcription.text + ' ';
+        
+      } catch (chunkError) {
+        console.error(`Error processing chunk ${i}:`, chunkError);
+        // Continue with next chunk instead of failing completely
+        continue;
+      }
     }
 
-    // Enhance the transcription into notes
+    if (!transcriptionText.trim()) {
+      throw new Error('No transcription was generated from any chunks');
+    }
+
+    // Rest of your code for enhancing notes remains the same
     const enhancedNotes = await groq.chat.completions.create({
       messages: [
         {
@@ -108,11 +117,16 @@ Ensure the notes are self-contained and do not require external references to un
     });
 
     return NextResponse.json({ 
-      transcription: transcriptionText, 
-      enhancedNotes: enhancedNotes.choices[0].message.content 
+      transcription: transcriptionText.trim(), 
+      enhancedNotes: enhancedNotes.choices[0].message.content,
+      totalChunks: audioChunks.length,
     });
+
   } catch (error) {
     console.error('Error processing audio:', error);
-    return NextResponse.json({ error: 'Error processing audio' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Error processing audio',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
