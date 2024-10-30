@@ -20,7 +20,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
@@ -28,11 +27,9 @@ import { Toaster } from '@/components/ui/toaster';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Checkbox } from '@/components/ui/checkbox';
 import { X } from 'lucide-react';  // Import the X icon
 import { createClientComponentClient, Session } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 
 const supabase = createClientComponentClient()
 
@@ -67,7 +64,7 @@ export default function Home() {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [selectedSubjects] = useState<string[]>([]);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -87,13 +84,15 @@ export default function Home() {
     try {
       const response = await axios.get<Subject[]>(`/api/subjects?userId=${session.user.id}`);
       setSubjects(response.data);
-    } catch (error: any) {
-      console.error('Error fetching subjects:', error);
-      toast({
-        title: 'Error',
-        description: error.response?.data?.error || 'Failed to fetch subjects. Please try again.',
-        variant: 'destructive',
-      });
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        console.error('Error fetching subjects:', error);
+        toast({
+          title: 'Error',
+          description: error.response?.data?.error || 'Failed to fetch subjects. Please try again.',
+          variant: 'destructive',
+        });
+      }
     }
   }, [session?.user?.id, toast]);
 
@@ -173,7 +172,7 @@ export default function Home() {
         title: 'Success',
         description: 'Subject added successfully.',
       });
-    } catch (error) {
+    } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         console.error('Error response:', error.response?.data); // Debug log
         toast({

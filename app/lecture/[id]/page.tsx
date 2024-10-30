@@ -33,10 +33,8 @@ interface Subject {
 export default function LecturePage() {
   const { id } = useParams();
   const [lecture, setLecture] = useState<Lecture | null>(null);
-  const [subject, setSubject] = useState<Subject | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
 
   useEffect(() => {
     const fetchLectureAndSubject = async () => {
@@ -45,9 +43,7 @@ export default function LecturePage() {
       try {
         const lectureResponse = await axios.get<Lecture>(`/api/lectures/${id}`);
         setLecture(lectureResponse.data);
-        const subjectResponse = await axios.get<Subject>(`/api/subjects/${lectureResponse.data.subject_id}`);
-        setSubject(subjectResponse.data);
-      } catch (error) {
+      } catch {
         setError('Failed to load lecture details. Please try again.');
       } finally {
         setIsLoading(false);
@@ -92,11 +88,7 @@ export default function LecturePage() {
               <h3 className="font-semibold">Transcript:</h3>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm" className="w-9 p-0">
-                  {isTranscriptOpen ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
+                  <ChevronDown className="h-4 w-4" />
                   <span className="sr-only">Toggle transcript</span>
                 </Button>
               </CollapsibleTrigger>
