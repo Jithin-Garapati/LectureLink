@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Groq } from 'groq-sdk';
 
-
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-// Utility function to split a buffer into chunks of specified size
+// Utility function to split a buffer into chunks
 function splitBuffer(buffer: Buffer, maxSizeInBytes: number): Buffer[] {
   const chunks = [];
   let offset = 0;
@@ -18,13 +17,16 @@ function splitBuffer(buffer: Buffer, maxSizeInBytes: number): Buffer[] {
   return chunks;
 }
 
-export const runtime = 'nodejs'; // Using Node.js runtime (or 'edge' if you're using the Edge runtime)
-export const dynamic = 'force-dynamic'; // Optional: Specify dynamic behavior if needed
-export const maxDuration = 300; // Increase Next.js API timeout to 5 minutes
-export const bodyParser = false; // Disable body parser to handle large files
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes timeout
 
 export async function POST(req: NextRequest) {
   try {
+    // Set response headers for larger payloads
+    const response = new NextResponse();
+    response.headers.set('Transfer-Encoding', 'chunked');
+
     const formData = await req.formData();
     const audioFile = formData.get('audio') as File;
 
@@ -33,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await audioFile.arrayBuffer());
-    const maxChunkSize = 10 * 1024 * 1024; // 10 MB chunks
+    const maxChunkSize = 5 * 1024 * 1024; // Reduced to 5 MB chunks for better handling
     const audioChunks = splitBuffer(buffer, maxChunkSize);
     let transcriptionText = '';
     
@@ -53,7 +55,6 @@ export async function POST(req: NextRequest) {
         
       } catch (chunkError) {
         console.error(`Error processing chunk ${i}:`, chunkError);
-        // Continue with next chunk instead of failing completely
         continue;
       }
     }
