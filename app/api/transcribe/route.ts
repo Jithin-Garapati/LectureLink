@@ -20,6 +20,8 @@ function splitBuffer(buffer: Buffer, maxSizeInBytes: number): Buffer[] {
 
 export const runtime = 'nodejs'; // Using Node.js runtime (or 'edge' if you're using the Edge runtime)
 export const dynamic = 'force-dynamic'; // Optional: Specify dynamic behavior if needed
+export const maxDuration = 300; // Increase Next.js API timeout to 5 minutes
+export const bodyParser = false; // Disable body parser to handle large files
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,11 +33,11 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await audioFile.arrayBuffer());
-    const maxChunkSize = 25 * 1024 * 1024; // 25 MB
+    const maxChunkSize = 10 * 1024 * 1024; // 10 MB chunks
     const audioChunks = splitBuffer(buffer, maxChunkSize);
     let transcriptionText = '';
     
-    // Process chunks with error handling for each chunk
+    // Process chunks with progress tracking
     for (let i = 0; i < audioChunks.length; i++) {
       try {
         const chunk = audioChunks[i];

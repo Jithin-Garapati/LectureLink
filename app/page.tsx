@@ -215,8 +215,15 @@ export default function Home() {
       formData.append('audio', audioBlob, 'lecture.webm');
       formData.append('subject_id', selectedSubject);
 
-      const transcribeResponse = await axios.post<{ transcription: string; enhancedNotes: string }>('/api/transcribe', formData, {
+      const transcribeResponse = await axios.post<{ transcription: string; enhancedNotes: string; totalChunks: number }>('/api/transcribe', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || progressEvent.loaded));
+          toast({
+            title: 'Uploading lecture...',
+            description: `${percentCompleted}% completed`,
+          });
+        },
       });
       const { transcription, enhancedNotes } = transcribeResponse.data;
 
@@ -249,7 +256,7 @@ export default function Home() {
       console.error('Error saving lecture:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save lecture. Please try again.',
+        description: error.response?.data?.details || 'Failed to save lecture. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -505,13 +512,26 @@ export default function Home() {
                     </SelectContent>
                   </Select>
                   <div className="flex flex-col sm:flex-row items-center gap-3 justify-center">
-                    <AudioRecorder 
-                      onRecordingComplete={onRecordingComplete}
-                      audioTrackConstraints={{
-                        noiseSuppression: true,
-                        echoCancellation: true,
-                      }} 
-                    />
+                    <div className="flex items-center gap-2">
+                      <AudioRecorder 
+                        onRecordingComplete={onRecordingComplete}
+                        audioTrackConstraints={{
+                          noiseSuppression: true,
+                          echoCancellation: true,
+                        }}
+                        downloadOnSavePress={false}
+                        showVisualizer={true}
+                        classes={{
+                          AudioRecorderDiscardClass: "text-red-500 hover:text-red-600 !order-last",
+                          AudioRecorderStartSaveClass: "text-gray-700 dark:text-gray-300 !order-first"
+                        }}
+                      />
+                      {audioBlob && (
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          Ready to save
+                        </span>
+                      )}
+                    </div>
                     {audioBlob && (
                       <Button 
                         onClick={onSaveLecture} 
