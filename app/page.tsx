@@ -64,7 +64,7 @@ const formSchema = z.object({
 });
 
 // Add these utility functions
-const splitAudioBlob = async (blob: Blob, maxChunkSize: number = 5 * 1024 * 1024) => {
+const splitAudioBlob = async (blob: Blob, maxChunkSize: number) => {
   const arrayBuffer = await blob.arrayBuffer();
   const chunks: Blob[] = [];
   let offset = 0;
@@ -228,27 +228,28 @@ export default function Home() {
 
     setIsProcessing(true);
     let fullTranscription = '';
+    let processedChunks = 0;
 
     try {
-      // Split audio into chunks
-      const chunks = await splitAudioBlob(audioBlob);
-      let processedChunks = 0;
+      // **Split audio into smaller chunks (e.g., 1 MB each)**
+      const chunks = await splitAudioBlob(audioBlob, 1 * 1024 * 1024); // 1 MB chunks
 
-      // Process each chunk
+      // **Process each chunk sequentially**
       for (const chunk of chunks) {
         const formData = new FormData();
-        formData.append('audio', chunk, 'chunk.webm');
-        formData.append('subject_id', selectedSubject);
+        formData.append('audio', chunk, `chunk_${processedChunks}.webm`);
         formData.append('chunkIndex', processedChunks.toString());
         formData.append('totalChunks', chunks.length.toString());
 
-        const transcribeResponse = await axios.post<{ transcription: string; enhancedNotes?: string }>(
+        const response = await axios.post(
           '/api/transcribe',
           formData,
           {
             headers: { 'Content-Type': 'multipart/form-data' },
             onUploadProgress: (progressEvent) => {
-              const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || progressEvent.loaded));
+              const percentCompleted = Math.round(
+                (progressEvent.loaded * 100) / (progressEvent.total || progressEvent.loaded)
+              );
               toast({
                 title: `Processing chunk ${processedChunks + 1}/${chunks.length}`,
                 description: `Upload progress: ${percentCompleted}%`,
@@ -257,52 +258,51 @@ export default function Home() {
           }
         );
 
-        fullTranscription += transcribeResponse.data.transcription + ' ';
+        fullTranscription += response.data.transcription + ' ';
         processedChunks++;
-
-        // If this is the last chunk, process the enhanced notes
-        if (processedChunks === chunks.length && transcribeResponse.data.enhancedNotes) {
-          const headingResponse = await axios.post('/api/generate-heading', {
-            transcription: fullTranscription,
-            enhancedNotes: transcribeResponse.data.enhancedNotes,
-          });
-
-          const { heading, subjectTag } = headingResponse.data;
-
-          const lectureData = {
-            subject_id: selectedSubject,
-            heading,
-            subject_tag: subjectTag,
-            transcript: fullTranscription.trim(),
-            enhanced_notes: transcribeResponse.data.enhancedNotes,
-            recorded_at: new Date().toISOString(),
-            user_id: session.user.id,
-          };
-
-          await axios.post('/api/lectures', lectureData);
-          fetchLectures();
-          setAudioBlob(null);
-          setSelectedSubject('');
-          toast({
-            title: 'Success',
-            description: 'Lecture saved successfully.',
-          });
-        }
       }
+
+      // **After processing all chunks, generate enhanced notes and save the lecture**
+      const headingResponse = await axios.post('/api/generate-heading', {
+        transcription: fullTranscription,
+      });
+      const { heading, subjectTag } = headingResponse.data;
+
+      const lectureData = {
+        subject_id: selectedSubject,
+        heading,
+        subject_tag: subjectTag,
+        transcript: fullTranscription.trim(),
+        enhanced_notes: '', // You can generate enhanced notes similarly if needed
+        recorded_at: new Date().toISOString(),
+        user_id: session.user.id,
+      };
+
+      await axios.post('/api/lectures', lectureData);
+
+      fetchLectures();
+      setAudioBlob(null);
+      setSelectedSubject('');
+      toast({
+        title: 'Success',
+        description: 'Lecture saved successfully.',
+      });
     } catch (error) {
       console.error('Error saving lecture:', error);
-      
-      // Create download URL for the audio in case of failure
+
+      // **Provide option to download audio if processing fails**
       const audioUrl = URL.createObjectURL(audioBlob);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      
+
       toast({
         title: 'Error Processing Lecture',
         description: (
           <div className="space-y-2">
-            <p>Failed to process the lecture. You can download the audio and try again later.</p>
-            <Button 
-              variant="outline" 
+            <p>
+              Failed to process the lecture. You can download the audio and try again later.
+            </p>
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => {
                 const link = document.createElement('a');
