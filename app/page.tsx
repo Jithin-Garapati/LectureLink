@@ -209,31 +209,37 @@ export default function Home() {
     }
 
     setIsProcessing(true);
+    let currentChunk = 0;
+    let transcriptionText = '';
 
     try {
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'lecture.webm');
-      formData.append('subject_id', selectedSubject);
+      while (true) {
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'lecture.webm');
+        formData.append('subject_id', selectedSubject);
+        formData.append('startChunk', currentChunk.toString());
 
-      const transcribeResponse = await axios.post<{ transcription: string; enhancedNotes: string; totalChunks: number }>(
-        '/api/transcribe', 
-        formData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || progressEvent.loaded));
-            toast({
-              title: 'Uploading lecture...',
-              description: `${percentCompleted}% completed`,
-            });
-          },
+        const response = await axios.post('/api/transcribe', formData);
+
+        if (response.data.status === 'partial') {
+          currentChunk += response.data.processedChunks;
+          transcriptionText += response.data.partialTranscription + ' ';
+          
+          toast({
+            title: 'Processing...',
+            description: `Processed ${currentChunk} of ${response.data.totalChunks} chunks`,
+          });
+
+          continue;
         }
-      );
-      const { transcription, enhancedNotes } = transcribeResponse.data;
+
+        // Rest of your existing code for final processing
+        break;
+      }
 
       const headingResponse = await axios.post('/api/generate-heading', {
-        transcription,
-        enhancedNotes,
+        transcription: transcriptionText,
+        enhancedNotes: transcriptionText,
       });
       const { heading, subjectTag } = headingResponse.data;
 
@@ -241,8 +247,8 @@ export default function Home() {
         subject_id: selectedSubject,
         heading,
         subject_tag: subjectTag,
-        transcript: transcription,
-        enhanced_notes: enhancedNotes,
+        transcript: transcriptionText,
+        enhanced_notes: transcriptionText,
         recorded_at: new Date().toISOString(),
         user_id: session.user.id,  // Add user ID to lecture data
       };

@@ -19,14 +19,10 @@ function splitBuffer(buffer: Buffer, maxSizeInBytes: number): Buffer[] {
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 300; // 5 minutes timeout
+export const maxDuration = 60; // Changed from 300 to 60 seconds for Vercel Hobby plan
 
 export async function POST(req: NextRequest) {
   try {
-    // Set response headers for larger payloads
-    const response = new NextResponse();
-    response.headers.set('Transfer-Encoding', 'chunked');
-
     const formData = await req.formData();
     const audioFile = formData.get('audio') as File;
 
@@ -35,7 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await audioFile.arrayBuffer());
-    const maxChunkSize = 5 * 1024 * 1024; // Reduced to 5 MB chunks for better handling
+    const maxChunkSize = 2 * 1024 * 1024; // Changed from 5MB to 2MB chunks
     const audioChunks = splitBuffer(buffer, maxChunkSize);
     let transcriptionText = '';
     
