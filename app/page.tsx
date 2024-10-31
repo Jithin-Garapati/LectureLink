@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { AudioRecorder } from 'react-audio-voice-recorder';
 import axios from 'axios';
@@ -38,6 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Plus } from 'lucide-react';
 
 const supabase = createClientComponentClient()
 
@@ -74,6 +75,7 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubjects] = useState<string[]>([]);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -415,6 +417,19 @@ export default function Home() {
     checkSession();
   }, [router]);
 
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith('audio/')) {
+      setAudioBlob(file);
+    } else {
+      toast({
+        title: 'Invalid file',
+        description: 'Please select an audio file',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Mobile-optimized header */}
@@ -565,6 +580,23 @@ export default function Home() {
                           AudioRecorderStartSaveClass: "text-gray-700 dark:text-gray-300 !order-first"
                         }}
                       />
+                      
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        onChange={handleFileSelect}
+                        ref={fileInputRef}
+                        className="hidden"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="rounded-full"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+
                       {audioBlob && (
                         <span className="text-sm text-gray-600 dark:text-gray-400">
                           Ready to save
