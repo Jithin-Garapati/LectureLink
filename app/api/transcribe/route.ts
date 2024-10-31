@@ -5,6 +5,7 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
+// Route segment config
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
