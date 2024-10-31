@@ -22,11 +22,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No valid audio file provided' }, { status: 400 });
     }
 
-    const arrayBuffer = await audioFile.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    // Create a File object that matches the Uploadable type
+    const file = new File([audioFile], `chunk_${chunkIndex}.webm`, {
+      type: 'audio/webm',
+      lastModified: Date.now(),
+    });
 
     const transcription = await groq.audio.transcriptions.create({
-      file: buffer,
+      file,
       model: "whisper-large-v3-turbo",
       response_format: "verbose_json"
     });
