@@ -419,12 +419,16 @@ export default function Home() {
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && file.type.startsWith('audio/')) {
+    if (file && (file.type.startsWith('audio/') || file.type === 'video/webm')) {
       setAudioBlob(file);
+      toast({
+        title: 'File selected',
+        description: file.name,
+      });
     } else {
       toast({
         title: 'Invalid file',
-        description: 'Please select an audio file',
+        description: 'Please select an audio file or webm recording',
         variant: 'destructive',
       });
     }
@@ -583,7 +587,7 @@ export default function Home() {
                       
                       <input
                         type="file"
-                        accept="audio/*"
+                        accept="audio/*,.webm"
                         onChange={handleFileSelect}
                         ref={fileInputRef}
                         className="hidden"
