@@ -63,6 +63,22 @@ const formSchema = z.object({
   name: z.string().min(1, "Subject name is required"),
 });
 
+// Add these utility functions
+const splitAudioBlob = async (blob: Blob, maxChunkSize: number = 5 * 1024 * 1024) => {
+  const arrayBuffer = await blob.arrayBuffer();
+  const chunks: Blob[] = [];
+  let offset = 0;
+  
+  while (offset < arrayBuffer.byteLength) {
+    const size = Math.min(maxChunkSize, arrayBuffer.byteLength - offset);
+    const chunk = arrayBuffer.slice(offset, offset + size);
+    chunks.push(new Blob([chunk], { type: blob.type }));
+    offset += size;
+  }
+  
+  return chunks;
+};
+
 export default function Home() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
@@ -211,63 +227,72 @@ export default function Home() {
     }
 
     setIsProcessing(true);
-    let currentChunk = 0;
-    let transcriptionText = '';
+    let fullTranscription = '';
 
     try {
-      while (true) {
+      // Split audio into chunks
+      const chunks = await splitAudioBlob(audioBlob);
+      let processedChunks = 0;
+
+      // Process each chunk
+      for (const chunk of chunks) {
         const formData = new FormData();
-        formData.append('audio', audioBlob, 'lecture.webm');
+        formData.append('audio', chunk, 'chunk.webm');
         formData.append('subject_id', selectedSubject);
-        formData.append('startChunk', currentChunk.toString());
+        formData.append('chunkIndex', processedChunks.toString());
+        formData.append('totalChunks', chunks.length.toString());
 
-        const response = await axios.post('/api/transcribe', formData);
+        const transcribeResponse = await axios.post<{ transcription: string; enhancedNotes?: string }>(
+          '/api/transcribe',
+          formData,
+          {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            onUploadProgress: (progressEvent) => {
+              const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || progressEvent.loaded));
+              toast({
+                title: `Processing chunk ${processedChunks + 1}/${chunks.length}`,
+                description: `Upload progress: ${percentCompleted}%`,
+              });
+            },
+          }
+        );
 
-        if (response.data.status === 'partial') {
-          currentChunk += response.data.processedChunks;
-          transcriptionText += response.data.partialTranscription + ' ';
-          
-          toast({
-            title: 'Processing...',
-            description: `Processed ${currentChunk} of ${response.data.totalChunks} chunks`,
+        fullTranscription += transcribeResponse.data.transcription + ' ';
+        processedChunks++;
+
+        // If this is the last chunk, process the enhanced notes
+        if (processedChunks === chunks.length && transcribeResponse.data.enhancedNotes) {
+          const headingResponse = await axios.post('/api/generate-heading', {
+            transcription: fullTranscription,
+            enhancedNotes: transcribeResponse.data.enhancedNotes,
           });
 
-          continue;
+          const { heading, subjectTag } = headingResponse.data;
+
+          const lectureData = {
+            subject_id: selectedSubject,
+            heading,
+            subject_tag: subjectTag,
+            transcript: fullTranscription.trim(),
+            enhanced_notes: transcribeResponse.data.enhancedNotes,
+            recorded_at: new Date().toISOString(),
+            user_id: session.user.id,
+          };
+
+          await axios.post('/api/lectures', lectureData);
+          fetchLectures();
+          setAudioBlob(null);
+          setSelectedSubject('');
+          toast({
+            title: 'Success',
+            description: 'Lecture saved successfully.',
+          });
         }
-
-        // Rest of your existing code for final processing
-        break;
       }
-
-      const headingResponse = await axios.post('/api/generate-heading', {
-        transcription: transcriptionText,
-        enhancedNotes: transcriptionText,
-      });
-      const { heading, subjectTag } = headingResponse.data;
-
-      const lectureData = {
-        subject_id: selectedSubject,
-        heading,
-        subject_tag: subjectTag,
-        transcript: transcriptionText,
-        enhanced_notes: transcriptionText,
-        recorded_at: new Date().toISOString(),
-        user_id: session.user.id,  // Add user ID to lecture data
-      };
-
-      await axios.post('/api/lectures', lectureData);
-
-      fetchLectures();
-      setAudioBlob(null);
-      setSelectedSubject('');
-      toast({
-        title: 'Success',
-        description: 'Lecture saved successfully.',
-      });
     } catch (error) {
       console.error('Error saving lecture:', error);
       
-      // Create download URL for the audio
+      // Create download URL for the audio in case of failure
       const audioUrl = URL.createObjectURL(audioBlob);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       
@@ -275,10 +300,7 @@ export default function Home() {
         title: 'Error Processing Lecture',
         description: (
           <div className="space-y-2">
-            <p>{axios.isAxiosError(error) && error.response?.data?.details 
-              ? error.response.data.details 
-              : 'Failed to save lecture. You can download the audio and try again later.'}
-            </p>
+            <p>Failed to process the lecture. You can download the audio and try again later.</p>
             <Button 
               variant="outline" 
               size="sm"
@@ -298,7 +320,7 @@ export default function Home() {
           </div>
         ),
         variant: 'destructive',
-        duration: 10000, // Show for 10 seconds to give time to download
+        duration: 10000,
       });
     } finally {
       setIsProcessing(false);
