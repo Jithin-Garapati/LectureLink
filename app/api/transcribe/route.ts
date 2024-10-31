@@ -13,17 +13,17 @@ export const maxDuration = 60;
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
-    const audioFile = formData.get('audio');
+    const audioFile = formData.get('audio') as File | null;
     const chunkIndex = parseInt(formData.get('chunkIndex') as string);
     const totalChunks = parseInt(formData.get('totalChunks') as string);
     const isLastChunk = chunkIndex === totalChunks - 1;
 
-    if (!audioFile) {
-      return NextResponse.json({ error: 'No audio file provided' }, { status: 400 });
+    if (!audioFile || !(audioFile instanceof Blob)) {
+      return NextResponse.json({ error: 'No valid audio file provided' }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await audioFile.arrayBuffer());
-    const chunkBlob = new Blob([buffer], { type: 'audio/webm' });
+    const arrayBuffer = await audioFile.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
     const transcription = await groq.audio.transcriptions.create({
       file: buffer,
