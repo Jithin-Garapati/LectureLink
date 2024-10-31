@@ -64,7 +64,7 @@ const formSchema = z.object({
 });
 
 // Add these utility functions
-const splitAudioBlob = async (blob: Blob, maxChunkSize: number = 1 * 1024 * 1024) => {
+const splitAudioBlob = async (blob: Blob, maxChunkSize: number = 500 * 1024) => {
   const arrayBuffer = await blob.arrayBuffer();
   const chunks: Blob[] = [];
   let offset = 0;
