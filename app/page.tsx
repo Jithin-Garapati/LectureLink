@@ -215,16 +215,20 @@ export default function Home() {
       formData.append('audio', audioBlob, 'lecture.webm');
       formData.append('subject_id', selectedSubject);
 
-      const transcribeResponse = await axios.post<{ transcription: string; enhancedNotes: string; totalChunks: number }>('/api/transcribe', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || progressEvent.loaded));
-          toast({
-            title: 'Uploading lecture...',
-            description: `${percentCompleted}% completed`,
-          });
-        },
-      });
+      const transcribeResponse = await axios.post<{ transcription: string; enhancedNotes: string; totalChunks: number }>(
+        '/api/transcribe', 
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || progressEvent.loaded));
+            toast({
+              title: 'Uploading lecture...',
+              description: `${percentCompleted}% completed`,
+            });
+          },
+        }
+      );
       const { transcription, enhancedNotes } = transcribeResponse.data;
 
       const headingResponse = await axios.post('/api/generate-heading', {
@@ -254,10 +258,39 @@ export default function Home() {
       });
     } catch (error) {
       console.error('Error saving lecture:', error);
+      
+      // Create download URL for the audio
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      
       toast({
-        title: 'Error',
-        description: error.response?.data?.details || 'Failed to save lecture. Please try again.',
+        title: 'Error Processing Lecture',
+        description: (
+          <div className="space-y-2">
+            <p>{axios.isAxiosError(error) && error.response?.data?.details 
+              ? error.response.data.details 
+              : 'Failed to save lecture. You can download the audio and try again later.'}
+            </p>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = audioUrl;
+                link.download = `lecture-${timestamp}.webm`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(audioUrl);
+              }}
+              className="w-full"
+            >
+              Download Audio
+            </Button>
+          </div>
+        ),
         variant: 'destructive',
+        duration: 10000, // Show for 10 seconds to give time to download
       });
     } finally {
       setIsProcessing(false);
