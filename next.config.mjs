@@ -4,7 +4,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   experimental: {
-    serverComponentsExternalPackages: ['groq-sdk'], // Example of adding external packages
+    serverComponentsExternalPackages: ['groq-sdk'],
   },
   webpack: (config) => {
     config.externals.push({
@@ -12,11 +12,6 @@ const nextConfig = {
       'bufferutil': 'commonjs bufferutil',
     });
     return config;
-  },
-  api: {
-    bodyParser: {
-      sizeLimit: '300mb', // This applies globally but isn't supported in next.config, so it must be set in individual API routes.
-    },
   },
 };
 
