@@ -65,10 +65,16 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-  } catch (error: Error) {
+  } catch (error: unknown) {
     console.error('Server error:', error);
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message || 'Internal server error' },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   } finally {
