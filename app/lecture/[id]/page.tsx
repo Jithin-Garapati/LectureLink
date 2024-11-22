@@ -89,7 +89,7 @@ export default function LecturePage() {
     }
   }, [id, toast, startPolling])
 
-  const startPolling = () => {
+  const startPolling = useCallback(() => {
     const pollInterval = setInterval(async () => {
       try {
         const response = await axios.get<Lecture>(`/api/lectures/${id}`)
@@ -110,7 +110,7 @@ export default function LecturePage() {
 
     // Cleanup on component unmount
     return () => clearInterval(pollInterval)
-  }
+  }, [id, toast])
 
   useEffect(() => {
     if (id) {

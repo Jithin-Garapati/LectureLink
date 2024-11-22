@@ -134,18 +134,15 @@ export default function Home() {
 
   // Filter Lectures
   const filterLectures = useCallback(() => {
-    let filtered = lectures;
-
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (lecture) =>
-          lecture.heading.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          lecture.subject_tag.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    if (!lectures) return;
+    
+    let filtered = [...lectures];
+    if (selectedSubject) {
+      filtered = filtered.filter(lecture => lecture.subject_id === selectedSubject);
     }
-
+    
     setFilteredLectures(filtered);
-  }, [lectures, searchTerm]);
+  }, [lectures, selectedSubject]);
 
   // Initial data fetch
   useEffect(() => {
@@ -156,7 +153,7 @@ export default function Home() {
   // Apply filters when data changes
   useEffect(() => {
     filterLectures();
-  }, [lectures, searchTerm, filterLectures]);
+  }, [filterLectures]);
 
   // Handle Adding New Subject
   const onAddSubject = async (data: z.infer<typeof formSchema>) => {
