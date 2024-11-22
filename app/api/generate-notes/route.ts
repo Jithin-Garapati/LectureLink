@@ -63,18 +63,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ notes });
   } catch (error) {
     // Detailed error logging
-    console.error('Error in generate-notes:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      details: error.response?.data || error.response || error
-    });
+    if (error instanceof Error) {
+      console.error('Error in generate-notes:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        details: (error as any).response?.data || (error as any).response || error
+      });
+      
+      return NextResponse.json(
+        { 
+          error: 'Failed to generate notes',
+          details: error.message 
+        },
+        { status: 500 }
+      );
+    }
     
+    // Handle unknown error types
+    console.error('Unknown error in generate-notes:', error);
     return NextResponse.json(
-      { 
-        error: 'Failed to generate notes',
-        details: error.message 
-      },
+      { error: 'Failed to generate notes' },
       { status: 500 }
     );
   }
