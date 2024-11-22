@@ -13,9 +13,12 @@ interface APIError extends Error {
 
 if (DEBUG) console.log('API Key:', process.env.NEXT_PUBLIC_GROQ_API_KEY);
 
+if (!process.env.GROQ_API_KEY) {
+  throw new Error('GROQ_API_KEY environment variable is not set');
+}
+
 const groq = new Groq({
-  apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY,
-  dangerouslyAllowBrowser: true
+  apiKey: process.env.GROQ_API_KEY
 });
 
 const SYSTEM_PROMPT = `You are a helpful teaching assistant that generates concise and well-structured notes from lecture transcripts.
@@ -42,10 +45,6 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!process.env.NEXT_PUBLIC_GROQ_API_KEY) {
-      throw new Error('GROQ API key is not configured');
-    }
-    
     const completion = await groq.chat.completions.create({
       messages: [
         {
