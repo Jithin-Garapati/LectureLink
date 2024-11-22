@@ -7,6 +7,11 @@ import fs from 'fs';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+// Add error handling for missing API key
+if (!process.env.GROQ_API_KEY) {
+  throw new Error('GROQ_API_KEY environment variable is not set');
+}
+
 // Define the Transcription type based on Groq's response
 interface Transcription {
   text: string;
