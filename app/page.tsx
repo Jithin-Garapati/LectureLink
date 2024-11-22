@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { X, Share2 } from 'lucide-react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Loader2 } from 'lucide-react';
+import debounce from 'lodash/debounce';
 
 // UI Components
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,7 @@ export default function Home() {
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [streamingTranscript, setStreamingTranscript] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const audioStorage = new AudioStorage();
   const { toast } = useToast();
 
@@ -400,6 +402,36 @@ export default function Home() {
     
     checkSession();
   }, [router]);
+
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((term: string) => {
+        if (!term.trim()) {
+          setFilteredLectures(lectures);
+          return;
+        }
+        const searchLower = term.toLowerCase();
+        const filtered = lectures.filter(
+          (lecture) =>
+            lecture.heading.toLowerCase().includes(searchLower) ||
+            lecture.transcript?.toLowerCase().includes(searchLower) ||
+            lecture.enhanced_notes?.toLowerCase().includes(searchLower)
+        );
+        setFilteredLectures(filtered);
+      }, 300),
+    [lectures]
+  );
+
+  useEffect(() => {
+    // Initialize filteredLectures with all lectures
+    setFilteredLectures(lectures);
+  }, [lectures]);
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    debouncedSearch(value);
+  };
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
@@ -568,7 +600,8 @@ export default function Home() {
                 </h2>
                 <Input
                   placeholder="Search lectures..."
-                  onChange={(e) => debouncedSearch(e.target.value)}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  value={searchTerm}
                   className="w-full sm:max-w-xs text-sm"
                 />
               </div>
