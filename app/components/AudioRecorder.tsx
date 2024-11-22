@@ -1,31 +1,16 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { AudioRecorder as BaseAudioRecorder } from 'react-audio-voice-recorder';
+import { useState } from 'react';
 import { AudioStorage } from '../lib/audioStorage';
 
 interface AudioRecorderProps {
-  onRecordingComplete?: (blob: Blob) => void;
-  onTranscriptUpdate: (text: string) => void;
-  onRecordingStateChange: (recording: boolean) => void;
   onData: (blob: Blob) => void;
-  userId: string;
-  subjectId: string;
-  visualizer?: boolean;
-  audioStorage: AudioStorage;
-  onProcessingProgress: (progress: number) => void;
+  onRecordingStateChange: (recording: boolean) => void;
 }
 
 export function AudioRecorder({
-  onRecordingComplete,
-  onTranscriptUpdate,
-  onRecordingStateChange,
   onData,
-  userId,
-  subjectId,
-  visualizer = true,
-  audioStorage,
-  onProcessingProgress
+  onRecordingStateChange,
 }: AudioRecorderProps) {
 
   const [isRecording, setIsRecording] = useState(false);

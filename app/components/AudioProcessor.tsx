@@ -1,9 +1,8 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
-import { AudioStorage, LectureStatus } from '../lib/audioStorage'
 import { Mic, Loader2 } from 'lucide-react'
 import { Session } from '@supabase/auth-helpers-nextjs'
 import Groq from 'groq-sdk'
@@ -14,7 +13,7 @@ const groq = new Groq({ apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY, dangerousl
 interface AudioProcessorProps {
   subjectId: string
   onTranscriptUpdate: (transcript: string) => void
-  audioStorage: any
+  audioStorage: AudioStorage
   session: Session | null
 }
 

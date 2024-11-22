@@ -42,14 +42,14 @@ export async function POST(request: NextRequest) {
         language: transcription.language,
         segments: transcription.segments
       });
-    } catch (error: any) {
+    } catch (error: Error) {
       console.error('Groq API error:', error);
       return NextResponse.json(
         { error: error.message || 'Error from Groq API' },
         { status: 500 }
       );
     }
-  } catch (error: any) {
+  } catch (error: Error) {
     console.error('Server error:', error);
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
