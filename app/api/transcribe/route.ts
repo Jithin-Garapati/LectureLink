@@ -1,67 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Groq } from 'groq-sdk';
+import { writeFile, unlink } from 'fs/promises';
+import { join } from 'path';
+import { tmpdir } from 'os';
+import Groq from 'groq-sdk';
+import fs from 'fs';
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Route segment config
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const maxDuration = 300;
-
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
+  let tempPath: string | null = null;
+  
   try {
-    const formData = await req.formData();
-    const audioFile = formData.get('audio') as Blob | null;
-    const chunkIndex = parseInt(formData.get('chunkIndex') as string);
-    const totalChunks = parseInt(formData.get('totalChunks') as string);
-    const isLastChunk = chunkIndex === totalChunks - 1;
-
-    if (!audioFile) {
-      return NextResponse.json({ error: 'No valid audio file provided' }, { status: 400 });
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    
+    if (!file) {
+      return NextResponse.json(
+        { error: 'No file uploaded' },
+        { status: 400 }
+      );
     }
 
-    // Create a File object that matches the Uploadable type
-    const file = new File([audioFile], `chunk_${chunkIndex}.webm`, {
-      type: 'audio/webm',
-      lastModified: Date.now(),
-    });
+    // Create a temporary file with mp3 extension
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    tempPath = join(tmpdir(), `upload-${Date.now()}.mp3`);
+    await writeFile(tempPath, buffer);
 
-    const transcription = await groq.audio.transcriptions.create({
-      file,
-      model: "whisper-large-v3-turbo",
-      response_format: "verbose_json"
-    });
-
-    if (isLastChunk) {
-      const enhancedNotes = await groq.chat.completions.create({
-        messages: [
-          { role: "system", content: `Your existing prompt...` },
-          { role: "user", content: transcription.text }
-        ],
-        model: "llama-3.2-90b-text-preview",
-        temperature: 0.7,
-        max_tokens: 2048,
-        top_p: 1,
-        stream: false,
+    try {
+      const transcription = await groq.audio.transcriptions.create({
+        file: fs.createReadStream(tempPath),
+        model: "whisper-large-v3-turbo",
+        response_format: "verbose_json",
+        language: "en",
+        temperature: 0.0,
       });
 
-      return NextResponse.json({ 
-        transcription: transcription.text.trim(),
-        enhancedNotes: enhancedNotes.choices[0].message.content,
+      // Ensure we're returning a properly formatted response
+      return NextResponse.json({
+        text: transcription.text,
+        language: transcription.language,
+        segments: transcription.segments
       });
+    } catch (error: any) {
+      console.error('Groq API error:', error);
+      return NextResponse.json(
+        { error: error.message || 'Error from Groq API' },
+        { status: 500 }
+      );
     }
-
-    return NextResponse.json({ 
-      transcription: transcription.text.trim(),
-    });
-
-  } catch (error) {
-    console.error('Error processing audio:', error);
-    return NextResponse.json({ 
-      error: 'Error processing audio',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+  } catch (error: any) {
+    console.error('Server error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    );
+  } finally {
+    if (tempPath) {
+      try {
+        await unlink(tempPath);
+      } catch (error) {
+        console.error('Error cleaning up temp file:', error);
+      }
+    }
   }
 }

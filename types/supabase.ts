@@ -6,6 +6,15 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+export type AuthChangeEvent =
+  | 'SIGNED_IN'
+  | 'SIGNED_OUT'
+  | 'USER_UPDATED'
+  | 'USER_DELETED'
+  | 'PASSWORD_RECOVERY'
+  | 'TOKEN_REFRESHED'
+  | 'MFA_CHALLENGE_VERIFIED';
+
 export interface Database {
   public: {
     Tables: {
@@ -19,6 +28,7 @@ export interface Database {
           enhanced_notes: string
           recorded_at: string
           user_id: string
+          status: 'draft' | 'recording' | 'completed'
         }
         Insert: {
           id?: string
@@ -29,6 +39,7 @@ export interface Database {
           enhanced_notes: string
           recorded_at: string
           user_id: string
+          status: 'draft' | 'recording' | 'completed'
         }
         Update: {
           id?: string
@@ -39,6 +50,7 @@ export interface Database {
           enhanced_notes?: string
           recorded_at?: string
           user_id?: string
+          status?: 'draft' | 'recording' | 'completed'
         }
       }
       subjects: {

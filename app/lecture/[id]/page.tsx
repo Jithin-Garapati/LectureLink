@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import axios from 'axios'
 import { format, parseISO } from 'date-fns'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from 'next/link'
-import { ChevronDown, ChevronUp, Share2, Copy, Link2 } from "lucide-react"
+import { ChevronDown, ChevronUp, Share2, Copy, Link2, Loader2 } from "lucide-react"
 import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { 
   Dialog,
@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast"
 import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
-import 'katex/dist/katex.min.css' // For styling the formulas
+import 'katex/dist/katex.min.css'
 
 interface Lecture {
   id: string
@@ -33,6 +33,8 @@ interface Lecture {
   transcript: string
   enhanced_notes: string
   recorded_at: string
+  status: string
+  transcription_progress: number
 }
 
 interface Subject {
@@ -41,7 +43,10 @@ interface Subject {
 }
 
 export default function LecturePage() {
-  const { id } = useParams()
+  const params = useParams();
+  const router = useRouter();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+
   const [lecture, setLecture] = useState<Lecture | null>(null)
   const [subject, setSubject] = useState<Subject | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -49,40 +54,72 @@ export default function LecturePage() {
   const [isTranscriptOpen, setIsTranscriptOpen] = useState(false)
   const { toast } = useToast()
   const [shareUrl, setShareUrl] = useState("")
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  const fetchLectureAndSubject = async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const lectureResponse = await axios.get<Lecture>(`/api/lectures/${id}`)
+      setLecture(lectureResponse.data)
+
+      // Start polling if the lecture is still processing
+      if (lectureResponse.data.status === 'processing' || 
+          lectureResponse.data.status === 'transcribing') {
+        setIsProcessing(true)
+        startPolling()
+      }
+
+      const subjectResponse = await axios.get<Subject>(`/api/subjects/${lectureResponse.data.subject_id}`)
+      setSubject(subjectResponse.data)
+    } catch (error) {
+      console.error('Error fetching lecture details:', error)
+      if (axios.isAxiosError(error)) {
+        const errorMessage = error.response?.data?.error || 'Failed to load lecture details'
+        setError(errorMessage)
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        })
+      } else {
+        setError('An unexpected error occurred')
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const startPolling = () => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await axios.get<Lecture>(`/api/lectures/${id}`)
+        setLecture(response.data)
+
+        if (response.data.status === 'completed') {
+          setIsProcessing(false)
+          clearInterval(pollInterval)
+          toast({
+            title: 'Processing Complete',
+            description: 'Your lecture has been fully processed!',
+          })
+        }
+      } catch (error) {
+        console.error('Polling error:', error)
+      }
+    }, 5000) // Poll every 5 seconds
+
+    // Cleanup on component unmount
+    return () => clearInterval(pollInterval)
+  }
 
   useEffect(() => {
-    const fetchLectureAndSubject = async () => {
-      setIsLoading(true)
-      setError(null)
-      try {
-        console.log('Fetching lecture with ID:', id)
-        const lectureResponse = await axios.get<Lecture>(`/api/lectures/${id}`)
-        console.log('Lecture data:', lectureResponse.data)
-        setLecture(lectureResponse.data)
-
-        console.log('Fetching subject with ID:', lectureResponse.data.subject_id)
-        const subjectResponse = await axios.get<Subject>(`/api/subjects/${lectureResponse.data.subject_id}`)
-        console.log('Subject data:', subjectResponse.data)
-        setSubject(subjectResponse.data)
-      } catch (error) {
-        console.error('Error fetching lecture details:', error)
-        if (axios.isAxiosError(error)) {
-          console.error('Response data:', error.response?.data)
-          console.error('Response status:', error.response?.status)
-        }
-        setError('Failed to load lecture details. Please try again.')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     if (id) {
       fetchLectureAndSubject()
     }
   }, [id])
 
   useEffect(() => {
-    // Generate share URL when component mounts
     if (typeof window !== 'undefined') {
       setShareUrl(`${window.location.origin}/shared/${id}`)
     }
@@ -115,11 +152,31 @@ export default function LecturePage() {
   }
 
   if (isLoading) {
-    return <div>Loading...</div>
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+          <p className="mt-4">Loading lecture...</p>
+        </div>
+      </div>
+    )
   }
 
   if (error || !lecture) {
-    return <div>{error || 'Failed to load lecture details.'}</div>
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-red-600 mb-4">Error</h2>
+          <p className="text-gray-600">{error || 'Failed to load lecture details.'}</p>
+          <Button 
+            onClick={() => fetchLectureAndSubject()} 
+            className="mt-4"
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -171,6 +228,20 @@ export default function LecturePage() {
       <Card>
         <CardHeader>
           <CardTitle>{lecture.heading}</CardTitle>
+          {isProcessing && (
+            <div className="mt-2">
+              <div className="flex items-center gap-2 text-sm text-blue-600">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Processing... {Math.round(lecture.transcription_progress)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                <div 
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
+                  style={{ width: `${lecture.transcription_progress}%` }}
+                />
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-500 mb-2">
@@ -185,63 +256,81 @@ export default function LecturePage() {
             Recorded on: {formatDate(lecture.recorded_at)}
           </p>
 
-          <Collapsible
-            open={isTranscriptOpen}
-            onOpenChange={setIsTranscriptOpen}
-            className="space-y-2"
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Transcript</h3>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-9 p-0">
-                  {isTranscriptOpen ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
+          {lecture.transcript && (
+            <Collapsible
+              open={isTranscriptOpen}
+              onOpenChange={setIsTranscriptOpen}
+              className="space-y-2"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">Transcript</h3>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-9 p-0">
+                    {isTranscriptOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                    <span className="sr-only">Toggle transcript</span>
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+              
+              <div className="rounded-md border border-gray-200 bg-slate-50 p-4">
+                <div className={`${isTranscriptOpen ? '' : 'max-h-16 overflow-hidden relative'}`}>
+                  <ReactMarkdown
+                    className="prose prose-sm max-w-none"
+                    remarkPlugins={[remarkMath]}
+                    rehypePlugins={[rehypeKatex]}
+                  >
+                    {lecture.transcript}
+                  </ReactMarkdown>
+                  {!isTranscriptOpen && (
+                    <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-slate-50 to-transparent" />
                   )}
-                  <span className="sr-only">Toggle transcript</span>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setIsTranscriptOpen(!isTranscriptOpen)}
+                  className="mt-2"
+                >
+                  {isTranscriptOpen ? 'Show Less' : 'Read More'}
                 </Button>
-              </CollapsibleTrigger>
-            </div>
-            
-            <div className="rounded-md border border-gray-200 bg-slate-50 p-4">
-              <div className={`${isTranscriptOpen ? '' : 'max-h-16 overflow-hidden relative'}`}>
+              </div>
+            </Collapsible>
+          )}
+
+          {lecture.enhanced_notes && (
+            <>
+              <h3 className="font-semibold mt-6 mb-2">Enhanced Notes:</h3>
+              <div className="rounded-md border border-gray-200 bg-slate-50 p-4">
                 <ReactMarkdown
-                  className="prose prose-sm max-w-none"
+                  className="prose prose-sm max-w-none 
+                    [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mt-6
+                    [&>h2]:text-xl [&>h2]:font-semibold [&>h2]:mt-5
+                    [&>h3]:text-lg [&>h3]:font-medium [&>h3]:mt-4
+                    [&>h4]:mt-4 
+                    [&>p]:mt-2"
                   remarkPlugins={[remarkMath]}
                   rehypePlugins={[rehypeKatex]}
                 >
-                  {lecture.transcript}
+                  {lecture.enhanced_notes}
                 </ReactMarkdown>
-                {!isTranscriptOpen && (
-                  <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-slate-50 to-transparent" />
-                )}
               </div>
+            </>
+          )}
+
+          {!lecture.transcript && !lecture.enhanced_notes && !isProcessing && (
+            <div className="text-center py-8 text-gray-500">
+              <p>Processing has not started yet.</p>
               <Button 
-                variant="ghost" 
-                onClick={() => setIsTranscriptOpen(!isTranscriptOpen)}
-                className="mt-2"
+                onClick={fetchLectureAndSubject}
+                className="mt-4"
               >
-                {isTranscriptOpen ? 'Show Less' : 'Read More'}
+                Refresh Status
               </Button>
             </div>
-          </Collapsible>
-
-          <h3 className="font-semibold mt-6 mb-2">Enhanced Notes:</h3>
-          <div className="rounded-md border border-gray-200 bg-slate-50 p-4">
-            <ReactMarkdown
-              className="prose prose-sm max-w-none 
-                [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mt-6
-                [&>h2]:text-xl [&>h2]:font-semibold [&>h2]:mt-5
-                [&>h3]:text-lg [&>h3]:font-medium [&>h3]:mt-4
-                [&>h4]:mt-4 
-                [&>p]:mt-2"
-              remarkPlugins={[remarkMath]}
-              rehypePlugins={[rehypeKatex]}
-            >
-              {lecture.enhanced_notes}
-            </ReactMarkdown>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

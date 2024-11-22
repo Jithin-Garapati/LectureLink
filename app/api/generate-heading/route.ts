@@ -2,56 +2,65 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Groq } from 'groq-sdk';
 
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+  apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY,
 });
 
 export async function POST(req: NextRequest) {
   try {
-    const { transcription, enhancedNotes } = await req.json();
+    const body = await req.json();
+    console.log('Received request body:', body);
 
-    const prompt = `
-      Analyze the following lecture transcription and enhanced notes. Then:
-      1. Generate a concise heading of 3-5 words that captures the main topic.
-      2. Create a single-word subject tag that best categorizes the lecture content.
+    const { transcription, enhancedNotes } = body;
+    console.log('Transcription length:', transcription?.length);
+    console.log('Enhanced notes length:', enhancedNotes?.length);
 
-      Transcription excerpt: ${transcription.substring(0, 300)}...
-      Enhanced Notes excerpt: ${enhancedNotes.substring(0, 300)}...
+    if (!transcription && !enhancedNotes) {
+      console.log('No transcription or enhanced notes provided');
+      return NextResponse.json({ error: 'No transcription or enhanced notes provided' }, { status: 400 });
+    }
 
-      Provide your response in the following JSON format:
-      {
-        "heading": "Your 3-5 word heading here",
-        "subjectTag": "YourSingleWordTag"
-      }
+    const textToAnalyze = transcription || enhancedNotes;
+    console.log('Text to analyze length:', textToAnalyze.length);
+    console.log('First 100 chars:', textToAnalyze.substring(0, 100));
 
-      Ensure the heading is descriptive but concise, and the subjectTag is a single word without spaces.
-    `;
+    const prompt = `Given this lecture transcription, generate a concise title and subject tag. Format the response as JSON with "heading" and "subjectTag" fields.
+    
+    Transcription: "${textToAnalyze.substring(0, 1000)}..."
+    
+    Generate a clear, informative heading that captures the main topic, and a short subject tag (1-3 words) for categorization.`;
 
+    console.log('Sending prompt to Groq');
     const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: "system",
-          content: "You are an AI assistant that generates concise headings and subject tags for academic lectures."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      model: "llama-3.1-8b-instant",
-      temperature: 0.7,
+      messages: [{ role: "user", content: prompt }],
+      model: "mixtral-8x7b-32768",
+      temperature: 0.3,
       max_tokens: 150,
-      stream: false,
     });
 
-    const content = completion.choices[0].message.content;
-    const response = content ? JSON.parse(content) : null;
+    const response = completion.choices[0]?.message?.content;
+    console.log('Groq response:', response);
 
-    // Ensure subjectTag is a single word
-    response.subjectTag = response.subjectTag.replace(/\s+/g, '');
+    if (!response) {
+      console.log('No response from Groq');
+      throw new Error('No response from Groq');
+    }
 
-    return NextResponse.json(response);
+    try {
+      const parsed = JSON.parse(response);
+      console.log('Parsed response:', parsed);
+      return NextResponse.json({
+        heading: parsed.heading,
+        subjectTag: parsed.subjectTag
+      });
+    } catch (error) {
+      console.error('Error parsing Groq response:', error);
+      return NextResponse.json({
+        heading: 'Untitled Lecture',
+        subjectTag: 'General'
+      });
+    }
   } catch (error) {
-    console.error('Error generating heading:', error);
-    return NextResponse.json({ error: 'Failed to generate heading and tag' }, { status: 500 });
+    console.error('Error in generate-heading:', error);
+    return NextResponse.json({ error: 'Failed to generate heading', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }

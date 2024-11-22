@@ -1,62 +1,86 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../lib/supabase';
+// app/api/lectures/[id]/route.ts
+import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
 
-// GET single lecture by id
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-  console.log('Fetching lecture with ID:', id);
-
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { data, error } = await supabase
+    const { data: lecture, error } = await supabase
       .from('lectures')
-      .select('*')
-      .eq('id', id)
+      .select(`
+        *,
+        subject:subjects (
+          id,
+          name
+        )
+      `)
+      .eq('id', params.id)
       .single();
 
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-
-    if (!data) {
-      console.error('Lecture not found');
+    if (error) throw error;
+    if (!lecture) {
       return NextResponse.json({ error: 'Lecture not found' }, { status: 404 });
     }
 
-    console.log('Lecture data:', data);
-    return NextResponse.json(data);
+    return NextResponse.json(lecture);
   } catch (error) {
-    console.error('Unexpected error:', error);
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+    console.error('Error fetching lecture:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch lecture' },
+      { status: 500 }
+    );
   }
 }
 
-// DELETE single lecture by id
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
-
-  console.log('Deleting lecture with ID:', id);
-
-  if (!id) {
-    return NextResponse.json({ error: 'Lecture ID is required' }, { status: 400 });
-  }
-
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { error } = await supabase
+    // Get lecture details including audio path
+    const { data: lecture, error: fetchError } = await supabase
       .from('lectures')
-      .delete()
-      .eq('id', id);
+      .select('audio_path, audio_chunks')
+      .eq('id', params.id)
+      .single();
 
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json({ error: error.message }, { status: 400 });
+    if (fetchError) throw fetchError;
+
+    // Delete audio file(s) from storage
+    if (lecture?.audio_path) {
+      await supabase.storage
+        .from('lectures')
+        .remove([lecture.audio_path]);
     }
 
-    console.log('Lecture deleted successfully');
-    return NextResponse.json({ message: 'Lecture deleted successfully' });
+    // Delete any audio chunks if they exist
+    if (lecture?.audio_chunks && Array.isArray(lecture.audio_chunks)) {
+      await supabase.storage
+        .from('lectures')
+        .remove(lecture.audio_chunks);
+    }
+
+    // Delete the lecture record
+    const { error: deleteError } = await supabase
+      .from('lectures')
+      .delete()
+      .eq('id', params.id);
+
+    if (deleteError) throw deleteError;
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Unexpected error:', error);
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+    console.error('Error:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete lecture' },
+      { status: 500 }
+    );
   }
 }
