@@ -6,8 +6,7 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 import { createClientComponentClient, Session } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
-import { X, Share2, Plus } from 'lucide-react';
-import { useDebouncedCallback } from 'use-debounce';
+import { X, Share2 } from 'lucide-react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Loader2 } from 'lucide-react';
 
@@ -70,7 +69,6 @@ export default function Home() {
   const [lectures, setLectures] = useState<Lecture[]>([]);
   const [filteredLectures, setFilteredLectures] = useState<Lecture[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string>('');
-  const [searchTerm, setSearchTerm] = useState('');
   const [streamingTranscript, setStreamingTranscript] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const audioStorage = new AudioStorage();

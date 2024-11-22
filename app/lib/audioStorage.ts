@@ -61,7 +61,7 @@ export class AudioStorage {
           heading: update.heading,
           subject_tag: update.subject_tag,
           updated_at: new Date().toISOString()
-        }).filter(([_, value]) => value !== undefined)
+        }).filter(([, value]) => value !== undefined)
       );
 
       const { error } = await this.supabase

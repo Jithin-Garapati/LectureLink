@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import axios from 'axios'
 import { format, parseISO } from 'date-fns'
@@ -55,7 +55,7 @@ export default function LecturePage() {
   const [shareUrl, setShareUrl] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
 
-  const fetchLectureAndSubject = async () => {
+  const fetchLectureAndSubject = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
@@ -87,7 +87,7 @@ export default function LecturePage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [id, toast, startPolling])
 
   const startPolling = () => {
     const pollInterval = setInterval(async () => {
@@ -141,7 +141,7 @@ export default function LecturePage() {
         title: "Link copied!",
         description: "Share this link with your classmates",
       })
-    } catch (_) {
+    } catch {
       toast({
         title: "Failed to copy",
         description: "Please try again",
@@ -274,7 +274,7 @@ export default function LecturePage() {
                   </Button>
                 </CollapsibleTrigger>
               </div>
-　　 　 　 　 <div className="rounded-md border border-gray-200 bg-slate-50 p-4">
+　　 　　 　 <div className="rounded-md border border-gray-200 bg-slate-50 p-4">
                 <div className={`${isTranscriptOpen ? '' : 'max-h-16 overflow-hidden relative'}`}>
                   <ReactMarkdown
                     className="prose prose-sm max-w-none"
