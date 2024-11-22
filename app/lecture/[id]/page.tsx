@@ -274,7 +274,7 @@ export default function LecturePage() {
                   </Button>
                 </CollapsibleTrigger>
               </div>
-　　 　　 　 <div className="rounded-md border border-gray-200 bg-slate-50 p-4">
+              <div className="rounded-md border border-gray-200 bg-slate-50 p-4">
                 <div className={`${isTranscriptOpen ? '' : 'max-h-16 overflow-hidden relative'}`}>
                   <ReactMarkdown
                     className="prose prose-sm max-w-none"
