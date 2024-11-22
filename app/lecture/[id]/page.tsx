@@ -53,7 +53,29 @@ export default function LecturePage() {
   const [isTranscriptOpen, setIsTranscriptOpen] = useState(false)
   const { toast } = useToast()
   const [shareUrl, setShareUrl] = useState("")
-  const [isProcessing, setIsProcessing] = useState(false)
+  const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      setPollInterval(null);
+    }
+  }, [pollInterval]);
+
+  const fetchLectureDetails = useCallback(async () => {
+    try {
+      const response = await axios.get<Lecture>(`/api/lectures/${id}`);
+      setLecture(response.data);
+      return response.data;
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch lecture details',
+        variant: 'destructive',
+      });
+      return null;
+    }
+  }, [id, toast]);
 
   const fetchLectureAndSubject = useCallback(async () => {
     setIsLoading(true)
@@ -61,13 +83,6 @@ export default function LecturePage() {
     try {
       const lectureResponse = await axios.get<Lecture>(`/api/lectures/${id}`)
       setLecture(lectureResponse.data)
-
-      // Start polling if the lecture is still processing
-      if (lectureResponse.data.status === 'processing' || 
-          lectureResponse.data.status === 'transcribing') {
-        setIsProcessing(true)
-        startPolling()
-      }
 
       const subjectResponse = await axios.get<Subject>(`/api/subjects/${lectureResponse.data.subject_id}`)
       setSubject(subjectResponse.data)
@@ -87,30 +102,32 @@ export default function LecturePage() {
     } finally {
       setIsLoading(false)
     }
-  }, [id, toast, startPolling])
-
-  const startPolling = useCallback(() => {
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await axios.get<Lecture>(`/api/lectures/${id}`)
-        setLecture(response.data)
-
-        if (response.data.status === 'completed') {
-          setIsProcessing(false)
-          clearInterval(pollInterval)
-          toast({
-            title: 'Processing Complete',
-            description: 'Your lecture has been fully processed!',
-          })
-        }
-      } catch (error) {
-        console.error('Polling error:', error)
-      }
-    }, 5000) // Poll every 5 seconds
-
-    // Cleanup on component unmount
-    return () => clearInterval(pollInterval)
   }, [id, toast])
+
+  useEffect(() => {
+    const initializeLecture = async () => {
+      setIsLoading(true);
+      const lectureData = await fetchLectureDetails();
+      if (lectureData?.status === 'processing') {
+        const interval = setInterval(async () => {
+          const updatedLecture = await fetchLectureDetails();
+          if (updatedLecture?.status !== 'processing') {
+            clearInterval(interval);
+          }
+        }, 5000);
+        setPollInterval(interval);
+      }
+      setIsLoading(false);
+    };
+
+    initializeLecture();
+
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [id, fetchLectureDetails, pollInterval]);
 
   useEffect(() => {
     if (id) {
@@ -227,7 +244,7 @@ export default function LecturePage() {
       <Card>
         <CardHeader>
           <CardTitle>{lecture.heading}</CardTitle>
-          {isProcessing && (
+          {lecture.status === 'processing' && (
             <div className="mt-2">
               <div className="flex items-center gap-2 text-sm text-blue-600">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -318,7 +335,7 @@ export default function LecturePage() {
             </>
           )}
 
-          {!lecture.transcript && !lecture.enhanced_notes && !isProcessing && (
+          {!lecture.transcript && !lecture.enhanced_notes && lecture.status !== 'processing' && (
             <div className="text-center py-8 text-gray-500">
               <p>Processing has not started yet.</p>
               <Button 
