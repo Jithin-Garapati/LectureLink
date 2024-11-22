@@ -25,7 +25,6 @@ export default function SharedLecturePage() {
   const { id } = useParams()
   const [lecture, setLecture] = useState<Lecture | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchSharedLecture = async () => {
@@ -34,8 +33,7 @@ export default function SharedLecturePage() {
         const response = await axios.get<Lecture>(`/api/shared/${id}`)
         setLecture(response.data)
       } catch (error) {
-        setError('This lecture is not available or has been removed.')
-      } finally {
+        console.error('Error fetching lecture:', error)
         setIsLoading(false)
       }
     }
@@ -50,11 +48,11 @@ export default function SharedLecturePage() {
       <div className="text-lg text-gray-600 dark:text-gray-400">Loading...</div>
     </div>
   )
-  
-  if (error || !lecture) return (
+
+  if (!lecture) return (
     <div className="flex justify-center items-center min-h-screen">
       <div className="text-lg text-gray-600 dark:text-gray-400">
-        {error || 'Lecture not found'}
+        Lecture not found
       </div>
     </div>
   )
@@ -111,7 +109,7 @@ export default function SharedLecturePage() {
             <div className="flex items-center gap-2">
               <Sparkles className="h-6 w-6 text-purple-500" />
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                Transform Your Lecture Notes! ✨
+                Transform Your Lecture Notes! 
               </h2>
             </div>
             <div className="inline-flex items-center px-4 py-1.5 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full text-sm font-medium">
@@ -122,7 +120,7 @@ export default function SharedLecturePage() {
           </div>
           
           <p className="text-gray-600 dark:text-gray-300 max-w-2xl">
-            Hey there! We're just getting started with LectureLink - a free tool I built to help students like you create better lecture notes using AI. Would love to have you try it out! 
+            Hey there! We&apos;re just getting started with LectureLink - a free tool I built to help students like you create better lecture notes using AI. Would love to have you try it out! 
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl mt-6">
@@ -133,8 +131,8 @@ export default function SharedLecturePage() {
             </div>
             <div className="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
               <Zap className="h-8 w-8 text-yellow-500 mb-2" />
-              <h3 className="font-semibold">Quick & Easy</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Record lectures & let AI do the work</p>
+              <h3 className="font-semibold">Quick &amp; Easy</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Record lectures &amp; let AI do the work</p>
             </div>
             <div className="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
               <Rocket className="h-8 w-8 text-purple-500 mb-2" />
@@ -147,11 +145,11 @@ export default function SharedLecturePage() {
             onClick={() => router.push('/auth/sign-in')}
             className="mt-6 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-2 rounded-full font-medium transform transition-all hover:scale-105"
           >
-            Try It Out - It's Free! 🚀
+            Try It Out - It&apos;s Free! 
           </Button>
 
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-            Built with ❤️ by a student, for students. Early access - be one of the first to try it!
+            Built with by a student, for students. Early access - be one of the first to try it!
           </p>
         </div>
       </div>
@@ -165,7 +163,7 @@ export default function SharedLecturePage() {
         >
           LectureLink
         </a>{" "}
-        📚
+        
       </footer>
     </div>
   )

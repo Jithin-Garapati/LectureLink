@@ -70,7 +70,6 @@ export class AudioStorage {
         .eq('id', lectureId);
 
       if (error) {
-        console.error('Database error:', error);
         throw new Error(`Failed to update lecture: ${error.message}`);
       }
     } catch (error) {

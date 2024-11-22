@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import axios from 'axios'
 import { format, parseISO } from 'date-fns'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -44,7 +44,6 @@ interface Subject {
 
 export default function LecturePage() {
   const params = useParams();
-  const router = useRouter();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [lecture, setLecture] = useState<Lecture | null>(null)
@@ -117,7 +116,7 @@ export default function LecturePage() {
     if (id) {
       fetchLectureAndSubject()
     }
-  }, [id])
+  }, [id, fetchLectureAndSubject])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -142,7 +141,7 @@ export default function LecturePage() {
         title: "Link copied!",
         description: "Share this link with your classmates",
       })
-    } catch (err) {
+    } catch (_) {
       toast({
         title: "Failed to copy",
         description: "Please try again",
@@ -275,8 +274,7 @@ export default function LecturePage() {
                   </Button>
                 </CollapsibleTrigger>
               </div>
-              
-              <div className="rounded-md border border-gray-200 bg-slate-50 p-4">
+　　 　 　 　 <div className="rounded-md border border-gray-200 bg-slate-50 p-4">
                 <div className={`${isTranscriptOpen ? '' : 'max-h-16 overflow-hidden relative'}`}>
                   <ReactMarkdown
                     className="prose prose-sm max-w-none"

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Mic, Loader2 } from 'lucide-react'
 import { Session } from '@supabase/auth-helpers-nextjs'
 import Groq from 'groq-sdk'
+import { AudioStorage } from '../lib/audioStorage'
 
 // Initialize Groq client
 const groq = new Groq({ apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY, dangerouslyAllowBrowser: true })
@@ -22,14 +23,6 @@ interface ProcessingState {
   message: string
   totalChunks: number
   processedChunks: number
-}
-
-interface LectureStatus {
-  status: 'processing' | 'completed' | 'error'
-  transcript?: string
-  enhanced_notes?: string
-  heading?: string
-  subject_tag?: string
 }
 
 const AudioProcessor: React.FC<AudioProcessorProps> = ({
@@ -97,6 +90,8 @@ const AudioProcessor: React.FC<AudioProcessorProps> = ({
               throw new Error('No transcription received')
             }
 
+            onTranscriptUpdate(transcription.text)
+
             setProcessingState(prev => ({
               ...prev,
               message: 'Generating enhanced notes...',
@@ -141,7 +136,7 @@ const AudioProcessor: React.FC<AudioProcessorProps> = ({
             console.log('Heading and subject tag received:', { heading, subjectTag })
 
             // Create and update lecture in Supabase
-            const lecture = await audioStorage.createLecture(subjectId, session?.user?.id!)
+            const lecture = await audioStorage.createLecture(subjectId, session?.user?.id || '')
             console.log('Created lecture:', lecture)
 
             // Update lecture in Supabase with all data at once
