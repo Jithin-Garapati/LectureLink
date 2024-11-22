@@ -4,6 +4,13 @@ import Groq from 'groq-sdk';
 // Enable for debugging
 const DEBUG = true;
 
+// Type for API Error responses
+interface APIError extends Error {
+  response?: {
+    data?: unknown;
+  };
+}
+
 if (DEBUG) console.log('API Key:', process.env.NEXT_PUBLIC_GROQ_API_KEY);
 
 const groq = new Groq({
@@ -64,17 +71,18 @@ export async function POST(request: Request) {
   } catch (error) {
     // Detailed error logging
     if (error instanceof Error) {
+      const apiError = error as APIError;
       console.error('Error in generate-notes:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        details: (error as any).response?.data || (error as any).response || error
+        name: apiError.name,
+        message: apiError.message,
+        stack: apiError.stack,
+        details: apiError.response?.data || apiError.response || error
       });
       
       return NextResponse.json(
         { 
           error: 'Failed to generate notes',
-          details: error.message 
+          details: apiError.message 
         },
         { status: 500 }
       );
