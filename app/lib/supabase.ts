@@ -10,8 +10,5 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true
-  },
-  storage: {
-    storageBackend: 'file'
   }
 });
