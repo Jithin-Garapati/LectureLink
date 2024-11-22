@@ -55,28 +55,6 @@ export default function LecturePage() {
   const [shareUrl, setShareUrl] = useState("")
   const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
 
-  const stopPolling = useCallback(() => {
-    if (pollInterval) {
-      clearInterval(pollInterval);
-      setPollInterval(null);
-    }
-  }, [pollInterval]);
-
-  const fetchLectureDetails = useCallback(async () => {
-    try {
-      const response = await axios.get<Lecture>(`/api/lectures/${id}`);
-      setLecture(response.data);
-      return response.data;
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch lecture details',
-        variant: 'destructive',
-      });
-      return null;
-    }
-  }, [id, toast]);
-
   const fetchLectureAndSubject = useCallback(async () => {
     setIsLoading(true)
     setError(null)
@@ -86,10 +64,33 @@ export default function LecturePage() {
 
       const subjectResponse = await axios.get<Subject>(`/api/subjects/${lectureResponse.data.subject_id}`)
       setSubject(subjectResponse.data)
-    } catch (error) {
-      console.error('Error fetching lecture details:', error)
-      if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.error || 'Failed to load lecture details'
+
+      // Start polling if lecture is processing
+      if (lectureResponse.data.status === 'processing') {
+        const interval = setInterval(async () => {
+          try {
+            const response = await axios.get<Lecture>(`/api/lectures/${id}`)
+            setLecture(response.data)
+            if (response.data.status !== 'processing') {
+              clearInterval(interval)
+              setPollInterval(null)
+              toast({
+                title: 'Processing Complete',
+                description: 'Your lecture has been fully processed!',
+              })
+            }
+          } catch (err) {
+            console.error('Polling error:', err)
+            clearInterval(interval)
+            setPollInterval(null)
+          }
+        }, 5000)
+        setPollInterval(interval)
+      }
+    } catch (err) {
+      console.error('Error fetching lecture details:', err)
+      if (axios.isAxiosError(err)) {
+        const errorMessage = err.response?.data?.message || 'Failed to fetch lecture details'
         setError(errorMessage)
         toast({
           title: 'Error',
@@ -105,35 +106,16 @@ export default function LecturePage() {
   }, [id, toast])
 
   useEffect(() => {
-    const initializeLecture = async () => {
-      setIsLoading(true);
-      const lectureData = await fetchLectureDetails();
-      if (lectureData?.status === 'processing') {
-        const interval = setInterval(async () => {
-          const updatedLecture = await fetchLectureDetails();
-          if (updatedLecture?.status !== 'processing') {
-            clearInterval(interval);
-          }
-        }, 5000);
-        setPollInterval(interval);
-      }
-      setIsLoading(false);
-    };
-
-    initializeLecture();
-
-    return () => {
-      if (pollInterval) {
-        clearInterval(pollInterval);
-      }
-    };
-  }, [id, fetchLectureDetails, pollInterval]);
-
-  useEffect(() => {
     if (id) {
       fetchLectureAndSubject()
     }
-  }, [id, fetchLectureAndSubject])
+
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval)
+      }
+    }
+  }, [id, fetchLectureAndSubject, pollInterval])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
