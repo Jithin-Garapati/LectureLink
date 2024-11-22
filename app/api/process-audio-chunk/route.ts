@@ -1,8 +1,8 @@
 // This file can be deleted as we're now processing directly with Groq from the frontend
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     return NextResponse.json({ message: 'Audio processing has been moved to client-side' }, { status: 410 });
   } catch (error) {
