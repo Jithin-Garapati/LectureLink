@@ -5,11 +5,7 @@ import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Mic, Loader2 } from 'lucide-react'
 import { Session } from '@supabase/auth-helpers-nextjs'
-import Groq from 'groq-sdk'
 import { AudioStorage } from '../lib/audioStorage'
-
-// Initialize Groq client
-const groq = new Groq({ apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY, dangerouslyAllowBrowser: true })
 
 interface AudioProcessorProps {
   subjectId: string
@@ -69,113 +65,9 @@ const AudioProcessor: React.FC<AudioProcessorProps> = ({
 
         mediaRecorder.onstop = async () => {
           try {
-            setProcessingState({
-              status: 'processing',
-              message: 'Getting transcription...',
-              totalChunks: 3, // 3 steps: transcribe, generate notes, generate heading
-              processedChunks: 0
-            })
-
-            // Step 1: Get transcription from Groq
-            const audioBlob = new Blob(audioChunksRef.current, { type: getSupportedMimeType() })
-            const transcription = await groq.audio.transcriptions.create({
-              file: new File([audioBlob], 'recording.webm', { type: getSupportedMimeType() }),
-              model: "whisper-large-v3",
-              response_format: "verbose_json",
-              language: "en",
-              temperature: 0.0,
-            })
-
-            if (!transcription || !transcription.text) {
-              throw new Error('No transcription received')
-            }
-
-            onTranscriptUpdate(transcription.text)
-
-            setProcessingState(prev => ({
-              ...prev,
-              message: 'Generating enhanced notes...',
-              processedChunks: 1
-            }))
-
-            // Step 2: Generate enhanced notes
-            const notesResponse = await fetch('/api/enhance', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ transcription: transcription.text }),
-            })
-
-            if (!notesResponse.ok) {
-              throw new Error('Failed to generate notes')
-            }
-
-            const { enhanced_notes: enhancedNotes } = await notesResponse.json()
-            console.log('Enhanced notes received:', enhancedNotes)
-
-            setProcessingState(prev => ({
-              ...prev,
-              message: 'Generating heading...',
-              processedChunks: 2
-            }))
-
-            // Step 3: Generate heading
-            const headingResponse = await fetch('/api/generate-heading', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                transcription: transcription.text,
-                enhancedNotes 
-              }),
-            })
-
-            if (!headingResponse.ok) {
-              throw new Error('Failed to generate heading')
-            }
-
-            const { heading, subjectTag } = await headingResponse.json()
-            console.log('Heading and subject tag received:', { heading, subjectTag })
-
-            // Create and update lecture in Supabase
-            const lecture = await audioStorage.createLecture(subjectId, session?.user?.id || '')
-            console.log('Created lecture:', lecture)
-
-            // Update lecture in Supabase with all data at once
-            const updateData = {
-              status: 'completed' as const,
-              transcript: transcription.text.trim(),
-              enhanced_notes: enhancedNotes,
-              heading,
-              subject_tag: subjectTag
-            }
-            console.log('Updating lecture with data:', updateData)
-
-            await audioStorage.updateLectureStatus(lecture.id, updateData)
-
-            setProcessingState(prev => ({
-              ...prev,
-              status: 'completed',
-              message: 'Processing complete',
-              processedChunks: 3
-            }))
-
-            toast({
-              title: 'Success',
-              description: 'Audio processed and notes generated successfully'
-            })
-
+            await processRecording()
           } catch (error) {
-            console.error('Error processing audio:', error)
-            toast({
-              title: 'Error',
-              description: error instanceof Error ? error.message : 'Failed to process audio',
-              variant: 'destructive'
-            })
-
-            setProcessingState(prev => ({
-              ...prev,
-              status: 'error',
-              message: error instanceof Error ? error.message : 'Failed to process audio'
-            }))
+            console.error('Error processing recording:', error)
           } finally {
             // Stop all tracks
             stream.getTracks().forEach(track => track.stop())
@@ -192,6 +84,117 @@ const AudioProcessor: React.FC<AudioProcessorProps> = ({
           variant: 'destructive'
         })
       }
+    }
+  }
+
+  const processRecording = async () => {
+    if (!session?.user?.id) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to record lectures',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    try {
+      let lecture = await audioStorage.createLecture(subjectId, session.user.id)
+
+      if (audioChunksRef.current.length > 0) {
+        setProcessingState({
+          status: 'processing',
+          message: 'Getting transcription...',
+          totalChunks: 3, // 3 steps: transcribe, generate notes, generate heading
+          processedChunks: 0
+        })
+
+        // Convert audio chunks to base64
+        const audioBlob = new Blob(audioChunksRef.current, { type: getSupportedMimeType() })
+        const base64Audio = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onloadend = () => {
+            const base64String = reader.result as string
+            resolve(base64String.split(',')[1]) // Remove data URL prefix
+          }
+          reader.readAsDataURL(audioBlob)
+        })
+
+        // Step 1: Get transcription from API route
+        const transcriptionResponse = await fetch('/api/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audio: base64Audio }),
+        })
+
+        if (!transcriptionResponse.ok) {
+          throw new Error('Failed to get transcription')
+        }
+
+        const transcription = await transcriptionResponse.json()
+        if (!transcription || !transcription.text) {
+          throw new Error('No transcription received')
+        }
+
+        onTranscriptUpdate(transcription.text)
+
+        // Update lecture with transcription
+        await audioStorage.updateLectureStatus(lecture.id, {
+          status: 'transcribing',
+          transcript: transcription.text
+        })
+
+        setProcessingState(prev => ({
+          ...prev,
+          message: 'Generating enhanced notes...',
+          processedChunks: 1
+        }))
+
+        // Step 2: Generate enhanced notes
+        const notesResponse = await fetch('/api/generate-notes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            transcript: transcription.text,
+          }),
+        })
+
+        if (!notesResponse.ok) {
+          throw new Error('Failed to generate notes')
+        }
+
+        const { notes } = await notesResponse.json()
+
+        // Update lecture with enhanced notes
+        await audioStorage.updateLectureStatus(lecture.id, {
+          status: 'completed',
+          enhanced_notes: notes
+        })
+
+        setProcessingState(prev => ({
+          ...prev,
+          status: 'completed',
+          message: 'Processing complete!',
+          processedChunks: prev.totalChunks
+        }))
+
+      } else {
+        throw new Error('No audio recorded')
+      }
+    } catch (error) {
+      console.error('Error processing recording:', error)
+      setProcessingState({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'An error occurred',
+        totalChunks: 0,
+        processedChunks: 0
+      })
+      toast({
+        title: 'Error',
+        description: 'Failed to process recording',
+        variant: 'destructive',
+      })
     }
   }
 
