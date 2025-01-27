@@ -11,7 +11,7 @@ if (!process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is not set');
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     // Create a short-lived token that includes the Groq API key
     const token = sign(
