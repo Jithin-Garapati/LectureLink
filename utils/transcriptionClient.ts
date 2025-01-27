@@ -10,9 +10,10 @@ export async function transcribeAudio(audioFile: File) {
     }
     
     const { token } = await tokenResponse.json();
-    
+    const { apiKey } = JSON.parse(atob(token.split('.')[1])); // Decode JWT payload
+
     // Create form data for Groq API
-    const formData = new globalThis.FormData();
+    const formData = new FormData();
     formData.append('file', audioFile);
     formData.append('model', 'whisper-large-v3-turbo');
     formData.append('response_format', 'verbose_json');
@@ -23,7 +24,7 @@ export async function transcribeAudio(audioFile: File) {
     const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${apiKey}`, // Use the extracted API key
       },
       body: formData
     });
