@@ -9,15 +9,67 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
 import { Button } from "@/components/ui/button"
-import { Sparkles, Rocket, Brain, Zap } from "lucide-react"
+import { Sparkles, Rocket, Brain, Zap, Clock } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 interface Lecture {
   id: string
   heading: string
   enhanced_notes: string
   subject_name: string
+  subject_tag: string
   formatted_date: string
   formatted_time: string
+}
+
+function ThinkingProcess({ content }: { content: string }) {
+  const [showThinking, setShowThinking] = useState(false)
+  const [timer, setTimer] = useState(30)
+
+  useEffect(() => {
+    if (showThinking && timer > 0) {
+      const interval = setInterval(() => {
+        setTimer(prev => prev - 1)
+      }, 1000)
+      return () => clearInterval(interval)
+    }
+  }, [showThinking, timer])
+
+  const match = content.match(/<think duration="(\d+)">([\s\S]*?)<\/think>/)
+  if (!match) return null
+
+  const [_, duration, thoughts] = match
+
+  return (
+    <Collapsible>
+      <CollapsibleTrigger asChild>
+        <Button 
+          variant="outline" 
+          className="w-full flex items-center justify-between p-4 mb-4"
+          onClick={() => setShowThinking(prev => !prev)}
+        >
+          <span>View AI Thinking Process</span>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            <span>{timer}s</span>
+          </div>
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <Card className="mb-6 bg-slate-50">
+          <CardContent className="p-4">
+            <ReactMarkdown
+              className="prose prose-sm max-w-none"
+              remarkPlugins={[remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+            >
+              {thoughts}
+            </ReactMarkdown>
+          </CardContent>
+        </Card>
+      </CollapsibleContent>
+    </Collapsible>
+  )
 }
 
 export default function SharedLecturePage() {
@@ -104,20 +156,14 @@ export default function SharedLecturePage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          <ThinkingProcess content={lecture.enhanced_notes} />
           <div className="rounded-md border border-gray-200 bg-slate-50 p-4 sm:p-6">
             <ReactMarkdown
-              className="prose prose-sm sm:prose max-w-none 
-                [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mt-6
-                [&>h2]:text-xl [&>h2]:font-semibold [&>h2]:mt-5
-                [&>h3]:text-lg [&>h3]:font-medium [&>h3]:mt-4
-                [&>h4]:mt-4 
-                [&>p]:mt-2
-                [&>ul]:mt-2 [&>ol]:mt-2
-                [&>*:first-child]:mt-0"
+              className="prose prose-sm sm:prose max-w-none"
               remarkPlugins={[remarkMath]}
               rehypePlugins={[rehypeKatex]}
             >
-              {lecture.enhanced_notes}
+              {lecture.enhanced_notes.replace(/<think[\s\S]*?<\/think>/, '')}
             </ReactMarkdown>
           </div>
         </CardContent>

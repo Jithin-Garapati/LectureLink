@@ -31,7 +31,20 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const prompt = `As an expert educational content analyzer, your task is to transform this lecture transcription into comprehensive, well-structured study notes. Follow this detailed analysis framework:
+    const prompt = `As an expert educational content analyzer, your task is to transform this lecture transcription into comprehensive, well-structured study notes. 
+
+First, show your thought process:
+
+<think duration="30">
+[Your step-by-step analysis of the lecture content, including:
+- Initial scan for announcements and key points
+- Identification of core concepts
+- Planning of note structure
+- Consideration of examples and applications
+- Analysis of potential student challenges]
+</think>
+
+Then, follow this detailed analysis framework:
 
 1. 📢 CRITICAL ANNOUNCEMENTS & ADMINISTRATIVE DETAILS
    - Extract and highlight ALL deadlines, exam dates, and assignment details with exact dates
@@ -104,7 +117,7 @@ Here's the lecture transcription to analyze:
     const completion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
       model: "deepseek-r1-distill-llama-70b",
-      temperature: 0.6,
+      temperature: 0.7,
       max_tokens: 4000,
       top_p: 0.95,
     });
