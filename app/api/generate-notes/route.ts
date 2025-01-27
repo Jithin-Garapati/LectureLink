@@ -21,14 +21,28 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
-const SYSTEM_PROMPT = `You are a helpful teaching assistant that generates concise and well-structured notes from lecture transcripts.
-Your task is to:
-1. Extract the key concepts and main ideas
-2. Organize them into clear, bullet-pointed sections
-3. Highlight important definitions, formulas, or examples
-4. Add brief explanations where necessary
+const NOTE_GENERATION_PROMPT = `Analyze the provided transcript of a teacher's lesson and generate a structured set of notes with two main sections:
 
-Format the notes in a clear, markdown structure.`;
+**Important Announcements**
+- Extract and list all deadlines, exam dates, project guidelines, or schedule changes
+- Include administrative details like submission portals, required materials, and policy updates
+
+**Study Notes**
+For each major concept covered:
+### [Concept Name]
+- **What it is**: Simple 1-2 sentence definition in everyday language
+- **Example**: Relatable analogy or scenario
+- **Key Detail**: Highlight common misunderstandings or important rules
+- **Practice**: Sample question or exercise
+- **Connections**: Links to prior lessons or real-life applications
+
+Guidelines:
+- Use bullet points and clear headings
+- Avoid jargon, prioritize simplicity
+- Highlight must-know details for exams
+- Flag and clarify commonly confused areas
+
+Here's the lecture transcript to analyze:`;
 
 export async function POST(request: Request) {
   try {
@@ -48,18 +62,14 @@ export async function POST(request: Request) {
     const completion = await groq.chat.completions.create({
       messages: [
         {
-          role: "system",
-          content: SYSTEM_PROMPT
-        },
-        {
           role: "user",
-          content: transcription
+          content: NOTE_GENERATION_PROMPT + "\n\n" + transcription
         }
       ],
-      model: "llama-3.1-70b-versatile",
-      temperature: 0.7,
-      max_tokens: 2048,
-      top_p: 1,
+      model: "deepseek-r1-distill-llama-70b",
+      temperature: 0.6,
+      max_completion_tokens: 2048,
+      top_p: 0.95,
     });
 
     if (DEBUG) console.log('Got completion response');
