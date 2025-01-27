@@ -25,15 +25,27 @@ export default function SharedLecturePage() {
   const { id } = useParams()
   const [lecture, setLecture] = useState<Lecture | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchSharedLecture = async () => {
       setIsLoading(true)
+      setError(null)
       try {
         const response = await axios.get<Lecture>(`/api/shared/${id}`)
         setLecture(response.data)
       } catch (error) {
         console.error('Error fetching lecture:', error)
+        if (axios.isAxiosError(error)) {
+          if (error.response?.status === 404) {
+            setError('Lecture not found. It may have been deleted or you may not have permission to view it.')
+          } else {
+            setError('Failed to load the lecture. Please try again later.')
+          }
+        } else {
+          setError('An unexpected error occurred. Please try again later.')
+        }
+      } finally {
         setIsLoading(false)
       }
     }
@@ -46,6 +58,15 @@ export default function SharedLecturePage() {
   if (isLoading) return (
     <div className="flex justify-center items-center min-h-screen">
       <div className="text-lg text-gray-600 dark:text-gray-400">Loading...</div>
+    </div>
+  )
+
+  if (error) return (
+    <div className="flex flex-col justify-center items-center min-h-screen gap-4">
+      <div className="text-lg text-red-600 dark:text-red-400">{error}</div>
+      <Button onClick={() => router.push('/')} variant="outline">
+        Return to Home
+      </Button>
     </div>
   )
 

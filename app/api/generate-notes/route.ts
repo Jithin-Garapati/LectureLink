@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       ],
       model: "deepseek-r1-distill-llama-70b",
       temperature: 0.6,
-      max_completion_tokens: 2048,
+      max_tokens: 2048,
       top_p: 0.95,
     });
 

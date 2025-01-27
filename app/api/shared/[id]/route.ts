@@ -4,6 +4,13 @@ import { Database } from '@/types/supabase';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    if (!params.id) {
+      return NextResponse.json(
+        { error: 'Lecture ID is required' },
+        { status: 400 }
+      );
+    }
+
     const { data: lecture, error } = await supabase
       .from('lectures')
       .select(`
@@ -17,11 +24,30 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     if (error) {
       console.error('Supabase error:', error);
-      return NextResponse.json({ error: String(error) }, { status: 400 });
+      if (error.code === 'PGRST116') {
+        return NextResponse.json(
+          { error: 'Lecture not found' },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json(
+        { error: 'Failed to fetch lecture' },
+        { status: 400 }
+      );
     }
 
     if (!lecture) {
-      return NextResponse.json({ error: 'Lecture not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Lecture not found' },
+        { status: 404 }
+      );
+    }
+
+    if (lecture.status !== 'completed') {
+      return NextResponse.json(
+        { error: 'Lecture is still processing' },
+        { status: 400 }
+      );
     }
 
     const formattedLecture = {
@@ -34,6 +60,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json(formattedLecture);
   } catch (error) {
     console.error('Unexpected error:', error);
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'An unexpected error occurred' },
+      { status: 500 }
+    );
   }
-} 
+}
