@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { sign } from 'jsonwebtoken';
 
 // Add error handling for missing API key
@@ -11,7 +11,7 @@ if (!process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is not set');
 }
 
-export async function POST(_request: NextRequest) {
+export async function POST() {
   try {
     // Create a short-lived token that includes the Groq API key
     const token = sign(
