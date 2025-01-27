@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Mic, Loader2 } from 'lucide-react'
 import { Session } from '@supabase/auth-helpers-nextjs'
 import { AudioStorage } from '../lib/audioStorage'
+import { transcribeAudio } from '@/utils/transcriptionClient'
 
 interface AudioProcessorProps {
   subjectId: string
@@ -72,100 +73,106 @@ const AudioProcessor: React.FC<AudioProcessorProps> = ({
               processedChunks: 0
             })
 
-            // Step 1: Get transcription from API route
+            // Step 1: Get transcription using client-side approach
             const audioBlob = new Blob(audioChunksRef.current, { type: getSupportedMimeType() })
+            const audioFile = new File([audioBlob], 'recording.webm', { type: getSupportedMimeType() })
             
-            // Create FormData and append the audio file
-            const formData = new FormData()
-            formData.append('file', audioBlob, 'recording.webm')
+            try {
+              const transcription = await transcribeAudio(audioFile)
+              if (!transcription || !transcription.text) {
+                throw new Error('No transcription received')
+              }
 
-            const transcriptionResponse = await fetch('/api/transcribe', {
-              method: 'POST',
-              body: formData,
-            })
+              onTranscriptUpdate(transcription.text)
 
-            if (!transcriptionResponse.ok) {
-              throw new Error('Failed to get transcription')
+              setProcessingState(prev => ({
+                ...prev,
+                message: 'Generating enhanced notes...',
+                processedChunks: 1
+              }))
+
+              // Step 2: Generate enhanced notes
+              const notesResponse = await fetch('/api/enhance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ transcription: transcription.text }),
+              })
+
+              if (!notesResponse.ok) {
+                throw new Error('Failed to generate notes')
+              }
+
+              const { enhanced_notes: enhancedNotes } = await notesResponse.json()
+              console.log('Enhanced notes received:', enhancedNotes)
+
+              setProcessingState(prev => ({
+                ...prev,
+                message: 'Generating heading...',
+                processedChunks: 2
+              }))
+
+              // Step 3: Generate heading
+              const headingResponse = await fetch('/api/generate-heading', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  transcription: transcription.text,
+                  enhancedNotes 
+                }),
+              })
+
+              if (!headingResponse.ok) {
+                throw new Error('Failed to generate heading')
+              }
+
+              const { heading, subjectTag } = await headingResponse.json()
+              console.log('Heading and subject tag received:', { heading, subjectTag })
+
+              // Create and update lecture in Supabase
+              const lecture = await audioStorage.createLecture(subjectId, session?.user?.id || '')
+              console.log('Created lecture:', lecture)
+
+              // Update lecture in Supabase with all data at once
+              const updateData = {
+                status: 'completed' as const,
+                transcript: transcription.text.trim(),
+                enhanced_notes: enhancedNotes,
+                heading,
+                subject_tag: subjectTag
+              }
+              console.log('Updating lecture with data:', updateData)
+
+              await audioStorage.updateLectureStatus(lecture.id, updateData)
+
+              setProcessingState(prev => ({
+                ...prev,
+                status: 'completed',
+                message: 'Processing complete',
+                processedChunks: 3
+              }))
+
+              toast({
+                title: 'Success',
+                description: 'Audio processed and notes generated successfully'
+              })
+
+            } catch (error) {
+              console.error('Error processing audio:', error)
+              toast({
+                title: 'Error',
+                description: error instanceof Error ? error.message : 'Failed to process audio',
+                variant: 'destructive'
+              })
+
+              setProcessingState(prev => ({
+                ...prev,
+                status: 'error',
+                message: error instanceof Error ? error.message : 'Failed to process audio'
+              }))
+            } finally {
+              // Stop all tracks
+              stream.getTracks().forEach(track => track.stop())
             }
-
-            const transcription = await transcriptionResponse.json()
-            if (!transcription || !transcription.text) {
-              throw new Error('No transcription received')
-            }
-
-            onTranscriptUpdate(transcription.text)
-
-            setProcessingState(prev => ({
-              ...prev,
-              message: 'Generating enhanced notes...',
-              processedChunks: 1
-            }))
-
-            // Step 2: Generate enhanced notes
-            const notesResponse = await fetch('/api/enhance', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ transcription: transcription.text }),
-            })
-
-            if (!notesResponse.ok) {
-              throw new Error('Failed to generate notes')
-            }
-
-            const { enhanced_notes: enhancedNotes } = await notesResponse.json()
-            console.log('Enhanced notes received:', enhancedNotes)
-
-            setProcessingState(prev => ({
-              ...prev,
-              message: 'Generating heading...',
-              processedChunks: 2
-            }))
-
-            // Step 3: Generate heading
-            const headingResponse = await fetch('/api/generate-heading', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                transcription: transcription.text,
-                enhancedNotes 
-              }),
-            })
-
-            if (!headingResponse.ok) {
-              throw new Error('Failed to generate heading')
-            }
-
-            const { heading, subjectTag } = await headingResponse.json()
-            console.log('Heading and subject tag received:', { heading, subjectTag })
-
-            // Create and update lecture in Supabase
-            const lecture = await audioStorage.createLecture(subjectId, session?.user?.id || '')
-            console.log('Created lecture:', lecture)
-
-            // Update lecture in Supabase with all data at once
-            const updateData = {
-              status: 'completed' as const,
-              transcript: transcription.text.trim(),
-              enhanced_notes: enhancedNotes,
-              heading,
-              subject_tag: subjectTag
-            }
-            console.log('Updating lecture with data:', updateData)
-
-            await audioStorage.updateLectureStatus(lecture.id, updateData)
-
-            setProcessingState(prev => ({
-              ...prev,
-              status: 'completed',
-              message: 'Processing complete',
-              processedChunks: 3
-            }))
-
-            toast({
-              title: 'Success',
-              description: 'Audio processed and notes generated successfully'
-            })
-
           } catch (error) {
             console.error('Error processing audio:', error)
             toast({
@@ -179,9 +186,6 @@ const AudioProcessor: React.FC<AudioProcessorProps> = ({
               status: 'error',
               message: error instanceof Error ? error.message : 'Failed to process audio'
             }))
-          } finally {
-            // Stop all tracks
-            stream.getTracks().forEach(track => track.stop())
           }
         }
 
