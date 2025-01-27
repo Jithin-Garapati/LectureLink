@@ -38,7 +38,7 @@ function ThinkingProcess({ content }: { content: string }) {
   const match = content.match(/<think duration="(\d+)">([\s\S]*?)<\/think>/)
   if (!match) return null
 
-  const [_, duration, thoughts] = match
+  const [, , thoughts] = match
 
   return (
     <Collapsible>

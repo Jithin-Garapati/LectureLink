@@ -37,76 +37,61 @@ First, show your thought process:
 
 <think duration="30">
 [Your step-by-step analysis of the lecture content, including:
-- Initial scan for announcements and key points
-- Identification of core concepts
-- Planning of note structure
-- Consideration of examples and applications
-- Analysis of potential student challenges]
+- Initial scan for key points and main topics
+- Identification of core concepts and technologies
+- Planning of note structure and organization
+- Analysis of practical applications and examples
+- Identification of technical requirements and tools]
 </think>
 
 Then, follow this detailed analysis framework:
 
-1. 📢 CRITICAL ANNOUNCEMENTS & ADMINISTRATIVE DETAILS
-   - Extract and highlight ALL deadlines, exam dates, and assignment details with exact dates
-   - Note any changes to course structure, syllabus modifications, or schedule adjustments
-   - List specific requirements for assignments, projects, or exams
-   - Include submission guidelines, formatting requirements, and grading criteria
-   - Highlight any special instructions or prerequisites mentioned
+1. 📢 IMPORTANT ANNOUNCEMENTS (if any)
+   - Extract any deadlines or important dates mentioned
+   - Note any special requirements or prerequisites
+   - List any tools or software needed for the course
 
 2. 🎯 CORE CONCEPTS & PRINCIPLES
    For each major concept covered:
    a) Clear Definition
       - Provide a precise, academic definition
-      - Follow with a simplified explanation in everyday language
-      - Include any specific terminology or jargon with clear explanations
+      - Follow with a simplified explanation
+      - Include any specific terminology explained simply
    
-   b) Detailed Breakdown
-      - List all key components or elements
-      - Explain relationships between different aspects
-      - Include any formulas, equations, or technical details
+   b) Technical Details
+      - List key components and features
+      - Explain how different parts work together
+      - Include any technical specifications or requirements
    
-   c) Real-World Applications
-      - Connect theoretical concepts to practical uses
-      - Provide concrete examples from industry or daily life
-      - Explain why this concept is important
+   c) Practical Applications
+      - Show real-world use cases
+      - Provide industry examples
+      - Explain practical benefits and limitations
 
-3. 💡 LEARNING OBJECTIVES & KEY TAKEAWAYS
-   - Identify the main learning goals from the lecture
-   - List skills or knowledge students should acquire
-   - Highlight concepts that build on previous lectures
-   - Note any prerequisites or foundational knowledge needed
+3. 💡 KEY TAKEAWAYS
+   - List main points from the lecture
+   - Highlight crucial concepts to remember
+   - Note any dependencies between topics
+   - Identify practical skills gained
 
-4. 📝 STUDY GUIDE & EXAM PREPARATION
-   - Create practice questions with detailed solutions
-   - Provide study strategies specific to the content
-   - List common misconceptions and how to avoid them
-   - Include memory aids, mnemonics, or learning techniques
-   - Note any specific areas the professor emphasized
-
-5. 🔍 SUPPLEMENTARY RESOURCES
-   - List any recommended readings, textbooks, or materials
-   - Include links to additional resources mentioned
-   - Note any software, tools, or equipment needed
-   - Mention relevant research papers or publications
-
-6. ❗ IMPORTANT WARNINGS & COMMON PITFALLS
-   - Document specific warnings from the professor
-   - List common mistakes students make
-   - Include critical points that are often misunderstood
-   - Note any challenging aspects that need extra attention
+4. 🔍 TOOLS & RESOURCES
+   - List all software and tools mentioned
+   - Include any recommended learning resources
+   - Note hardware requirements if specified
+   - Add links to documentation or guides
 
 Format the notes using clear markdown with:
 - Hierarchical headers (###) for main sections
 - Bullet points for easy reading
 - **Bold** for important terms and concepts
 - \`code blocks\` for technical content
-- > Blockquotes for professor's direct quotes or emphasis
-- Tables for organized information where appropriate
+- > Blockquotes for important quotes or emphasis
+- Tables for comparing features or specifications
 
 Remember to:
-- Maintain academic rigor while ensuring clarity
-- Use clear, precise language
-- Include ALL important details
+- Keep explanations clear and practical
+- Focus on real-world applications
+- Include all technical details
 - Structure information logically
 - Make complex concepts accessible
 
