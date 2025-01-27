@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabase';
 import { Database } from '@/types/supabase';
 
+// Define a custom error interface
+interface SupabaseError {
+  code: string;
+  message: string;
+}
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     if (!params.id) {
@@ -20,7 +26,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         )
       `)
       .eq('id', params.id)
-      .single() as { data: Database['public']['Tables']['lectures']['Row'] & { subjects: { name: string } | null }, error: null };
+      .single() as { data: Database['public']['Tables']['lectures']['Row'] & { subjects: { name: string } | null }, error: SupabaseError | null };
 
     if (error) {
       console.error('Supabase error:', error);
