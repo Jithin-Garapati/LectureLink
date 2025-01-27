@@ -11,6 +11,9 @@ if (!process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is not set');
 }
 
+// Store the secret in a variable after validation
+const JWT_SECRET = process.env.JWT_SECRET;
+
 export async function POST() {
   try {
     // Create a short-lived token that includes the Groq API key
@@ -19,7 +22,7 @@ export async function POST() {
         apiKey: process.env.GROQ_API_KEY,
         exp: Math.floor(Date.now() / 1000) + (5 * 60) // 5 minutes expiration
       },
-      process.env.JWT_SECRET
+      JWT_SECRET // Use the validated secret
     );
 
     return NextResponse.json({ token });
