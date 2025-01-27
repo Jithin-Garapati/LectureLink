@@ -1,7 +1,6 @@
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB chunks to reduce rate limiting
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB to be safely under 25MB limit
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000; // 2 seconds
-const CHUNK_DELAY = 5000; // 5 second delay between chunks
 
 // Get API keys from environment
 const API_KEYS = [
@@ -27,8 +26,6 @@ async function transcribeChunkWithRetry(chunk: Blob, retryCount = 0, keyIndex = 
       throw new Error('No valid API key available');
     }
 
-    console.log(`Using API key ${keyIndex + 1}/${API_KEYS.length}`);
-
     const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
@@ -45,12 +42,12 @@ async function transcribeChunkWithRetry(chunk: Blob, retryCount = 0, keyIndex = 
       if (response.status === 429) { // Too Many Requests
         // Try the next API key if available
         if (keyIndex + 1 < API_KEYS.length) {
-          console.log(`Rate limit hit on API key ${keyIndex + 1}, switching to key ${keyIndex + 2}...`);
+          console.log('Rate limit hit, switching to backup API key...');
           return transcribeChunkWithRetry(chunk, retryCount, keyIndex + 1);
         }
         // If we've tried all keys, wait and retry with the first one
         console.log('All API keys rate limited, waiting before retry...');
-        await sleep(RETRY_DELAY * Math.pow(2, retryCount)); // Exponential backoff
+        await sleep(RETRY_DELAY * (retryCount + 1));
         return transcribeChunkWithRetry(chunk, retryCount + 1, 0);
       }
       throw new Error(error.error?.message || `Transcription failed with status ${response.status}`);
@@ -59,10 +56,10 @@ async function transcribeChunkWithRetry(chunk: Blob, retryCount = 0, keyIndex = 
     return await response.json();
   } catch (error) {
     if (retryCount < MAX_RETRIES) {
-      console.log(`Retry attempt ${retryCount + 1} for chunk with API key ${keyIndex + 1}...`);
+      console.log(`Retry attempt ${retryCount + 1} for chunk...`);
       // Try the next API key on retry if available
       const nextKeyIndex = (keyIndex + 1) % API_KEYS.length;
-      await sleep(RETRY_DELAY * Math.pow(2, retryCount)); // Exponential backoff
+      await sleep(RETRY_DELAY * (retryCount + 1)); // Exponential backoff
       return transcribeChunkWithRetry(chunk, retryCount + 1, nextKeyIndex);
     }
     throw error;
@@ -75,7 +72,6 @@ export async function transcribeAudio(audioFile: File) {
       throw new Error('No Groq API keys configured');
     }
 
-    console.log(`Available API keys: ${API_KEYS.length}`);
     let fullTranscription = '';
     const chunks: Blob[] = [];
     
@@ -87,7 +83,7 @@ export async function transcribeAudio(audioFile: File) {
       offset += MAX_FILE_SIZE;
     }
 
-    console.log(`Split audio into ${chunks.length} chunks of ${MAX_FILE_SIZE / (1024 * 1024)}MB each`);
+    console.log(`Split audio into ${chunks.length} chunks`);
 
     // Process chunks sequentially with progress tracking
     for (let i = 0; i < chunks.length; i++) {
@@ -95,16 +91,9 @@ export async function transcribeAudio(audioFile: File) {
       try {
         // Start with a random API key for better load distribution
         const startKeyIndex = Math.floor(Math.random() * API_KEYS.length);
-        console.log(`Starting chunk ${i + 1} with API key ${startKeyIndex + 1}`);
         const result = await transcribeChunkWithRetry(chunks[i], 0, startKeyIndex);
         fullTranscription += result.text + ' ';
         console.log(`Successfully processed chunk ${i + 1}`);
-        
-        // Add delay between chunks to avoid rate limits
-        if (i < chunks.length - 1) {
-          console.log(`Waiting ${CHUNK_DELAY/1000} seconds before processing next chunk...`);
-          await sleep(CHUNK_DELAY);
-        }
       } catch (chunkError: any) {
         console.error(`Error processing chunk ${i + 1}:`, chunkError);
         throw new Error(`Failed to process chunk ${i + 1}: ${chunkError.message}`);
