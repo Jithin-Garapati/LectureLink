@@ -1,5 +1,3 @@
-import FormData from 'form-data';
-
 export async function transcribeAudio(audioFile: File) {
   try {
     // First, get a secure token from our server
@@ -14,7 +12,7 @@ export async function transcribeAudio(audioFile: File) {
     const { token } = await tokenResponse.json();
     
     // Create form data for Groq API
-    const formData = new FormData();
+    const formData = new globalThis.FormData();
     formData.append('file', audioFile);
     formData.append('model', 'whisper-large-v3-turbo');
     formData.append('response_format', 'verbose_json');
