@@ -30,6 +30,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     if (error) {
       console.error('Supabase error:', error);
+      console.error('Requested ID:', params.id); // Log the requested ID
       if (error.code === 'PGRST116') {
         return NextResponse.json(
           { error: 'Lecture not found' },
@@ -43,6 +44,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     if (!lecture) {
+      console.error('Lecture not found for ID:', params.id); // Log when lecture is not found
       return NextResponse.json(
         { error: 'Lecture not found' },
         { status: 404 }
