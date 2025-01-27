@@ -1,4 +1,4 @@
-const MAX_FILE_SIZE = 35 * 1024 * 1024; // 35MB to be safe
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB to be safely under 25MB limit
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000; // 2 seconds
 
@@ -25,7 +25,10 @@ async function transcribeChunkWithRetry(chunk: Blob, retryCount = 0): Promise<an
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error?.message || 'Transcription failed');
+      if (response.status === 413) {
+        throw new Error('File too large. Please try a smaller chunk size.');
+      }
+      throw new Error(error.error?.message || `Transcription failed with status ${response.status}`);
     }
 
     return await response.json();
@@ -56,9 +59,15 @@ export async function transcribeAudio(audioFile: File) {
 
     // Process chunks sequentially with progress tracking
     for (let i = 0; i < chunks.length; i++) {
-      console.log(`Processing chunk ${i + 1}/${chunks.length}`);
-      const result = await transcribeChunkWithRetry(chunks[i]);
-      fullTranscription += result.text + ' ';
+      console.log(`Processing chunk ${i + 1}/${chunks.length} (${(chunks[i].size / (1024 * 1024)).toFixed(2)}MB)`);
+      try {
+        const result = await transcribeChunkWithRetry(chunks[i]);
+        fullTranscription += result.text + ' ';
+        console.log(`Successfully processed chunk ${i + 1}`);
+      } catch (chunkError: any) {
+        console.error(`Error processing chunk ${i + 1}:`, chunkError);
+        throw new Error(`Failed to process chunk ${i + 1}: ${chunkError.message}`);
+      }
     }
 
     return { text: fullTranscription.trim() };
