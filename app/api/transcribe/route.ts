@@ -6,11 +6,10 @@ import { v4 as uuidv4 } from 'uuid';
 
 const CHUNK_SIZE = 25 * 1024 * 1024; // 25MB chunks
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Using new Next.js route segment config
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes
 
 async function saveFileLocally(formData: FormData) {
   const file = formData.get('file') as File;

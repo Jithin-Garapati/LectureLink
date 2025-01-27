@@ -3,8 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Groq } from 'groq-sdk';
 
 const groq = new Groq({
-  apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY,
+  apiKey: process.env.GROQ_API_KEY,
 });
+
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,51 +31,82 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const prompt = `This is a classroom lecture recording. Please analyze and enhance it by:
+    const prompt = `As an expert educational content analyzer, your task is to transform this lecture transcription into comprehensive, well-structured study notes. Follow this detailed analysis framework:
 
-    1. 📢 IMPORTANT ANNOUNCEMENTS (only if exists)
-       - Extract any mentions of exams, quizzes, assignments, deadlines, or course requirements
-       - Highlight any changes to syllabus or class schedule
-       - Note any special instructions or requirements from the teacher
+1. 📢 CRITICAL ANNOUNCEMENTS & ADMINISTRATIVE DETAILS
+   - Extract and highlight ALL deadlines, exam dates, and assignment details with exact dates
+   - Note any changes to course structure, syllabus modifications, or schedule adjustments
+   - List specific requirements for assignments, projects, or exams
+   - Include submission guidelines, formatting requirements, and grading criteria
+   - Highlight any special instructions or prerequisites mentioned
 
-    2. 📝 MAIN CONCEPTS (Simplified)
-       - Break down complex topics into simple, easy-to-understand explanations
-       - Use everyday examples where possible
-       - Include step-by-step breakdowns of difficult concepts
-       - Add analogies to help understand abstract ideas
+2. 🎯 CORE CONCEPTS & PRINCIPLES
+   For each major concept covered:
+   a) Clear Definition
+      - Provide a precise, academic definition
+      - Follow with a simplified explanation in everyday language
+      - Include any specific terminology or jargon with clear explanations
+   
+   b) Detailed Breakdown
+      - List all key components or elements
+      - Explain relationships between different aspects
+      - Include any formulas, equations, or technical details
+   
+   c) Real-World Applications
+      - Connect theoretical concepts to practical uses
+      - Provide concrete examples from industry or daily life
+      - Explain why this concept is important
 
-    3. 🎯 KEY POINTS
-       - Bullet point all important information
-       - Highlight crucial terms and definitions
-       - Include any formulas or equations with explanations of what each variable means
-       - Note any specific examples the teacher emphasized
+3. 💡 LEARNING OBJECTIVES & KEY TAKEAWAYS
+   - Identify the main learning goals from the lecture
+   - List skills or knowledge students should acquire
+   - Highlight concepts that build on previous lectures
+   - Note any prerequisites or foundational knowledge needed
 
-    4. 📚 STUDY NOTES
-       - Create a quick summary of main topics
-       - Add mnemonics or memory tricks if mentioned
-       - List any study tips or exam preparation advice given
-       - Include any recommended practice problems or readings
+4. 📝 STUDY GUIDE & EXAM PREPARATION
+   - Create practice questions with detailed solutions
+   - Provide study strategies specific to the content
+   - List common misconceptions and how to avoid them
+   - Include memory aids, mnemonics, or learning techniques
+   - Note any specific areas the professor emphasized
 
-    5. ❗ COMMON MISTAKES & WARNINGS
-       - Note any common errors the teacher warned about
-       - Include specific points the teacher stressed as important
-       - Highlight any "this will be on the test" type comments
+5. 🔍 SUPPLEMENTARY RESOURCES
+   - List any recommended readings, textbooks, or materials
+   - Include links to additional resources mentioned
+   - Note any software, tools, or equipment needed
+   - Mention relevant research papers or publications
 
-    Please format in markdown with clear sections and use:
-    - Bold for important terms
-    - Code blocks for formulas or technical content
-    - Bullet points for easy reading
-    - Headers for clear organization
+6. ❗ IMPORTANT WARNINGS & COMMON PITFALLS
+   - Document specific warnings from the professor
+   - List common mistakes students make
+   - Include critical points that are often misunderstood
+   - Note any challenging aspects that need extra attention
 
-    Remember to keep language clear and straightforward while maintaining accuracy.
+Format the notes using clear markdown with:
+- Hierarchical headers (###) for main sections
+- Bullet points for easy reading
+- **Bold** for important terms and concepts
+- \`code blocks\` for technical content
+- > Blockquotes for professor's direct quotes or emphasis
+- Tables for organized information where appropriate
 
-    Transcription: "${body.transcription.substring(0, 2000)}..."`;
+Remember to:
+- Maintain academic rigor while ensuring clarity
+- Use clear, precise language
+- Include ALL important details
+- Structure information logically
+- Make complex concepts accessible
+
+Here's the lecture transcription to analyze:
+
+"${transcription}"`;
 
     const completion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
-      model: "mixtral-8x7b-32768",
-      temperature: 0.3,
-      max_tokens: 2000,
+      model: "deepseek-r1-distill-llama-70b",
+      temperature: 0.6,
+      max_tokens: 4000,
+      top_p: 0.95,
     });
 
     const enhancedNotes = completion.choices[0]?.message?.content;
