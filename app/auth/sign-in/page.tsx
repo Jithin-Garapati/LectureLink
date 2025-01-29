@@ -1,4 +1,5 @@
 'use client';
+import Link from "next/link";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -102,9 +103,14 @@ export default function SignIn() {
           </a>
           <footer className="py-4 text-center text-sm text-gray-800">
           by{" "}
-          <span className="font-medium">
-            kushal
-          </span>
+          <Link
+            href="https://x.com/jithingarapati"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium hover:underline"
+          >
+            jithin garapati
+          </Link>
         </footer>
         </div>
       </div>

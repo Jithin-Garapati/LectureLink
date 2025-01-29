@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import Link from "next/link";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -33,9 +34,14 @@ export default function RootLayout({
         </main>
         <footer className="py-4 text-center text-sm text-gray-800">
           by{" "}
-          <span className="font-medium">
-            kushal
-          </span>
+          <Link
+            href="https://x.com/jithingarapati"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium hover:underline"
+          >
+            jithin garapati
+          </Link>
         </footer>
       </body>
     </html>
