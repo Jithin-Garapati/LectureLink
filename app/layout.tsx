@@ -34,14 +34,9 @@ export default function RootLayout({
         </main>
         <footer className="py-4 text-center text-sm text-gray-800">
           by{" "}
-          <Link
-            href="https://x.com/jithingarapati"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium hover:underline"
-          >
-            jithin garapati
-          </Link>
+          <span className="font-medium">
+            kushal
+          </span>
         </footer>
       </body>
     </html>
