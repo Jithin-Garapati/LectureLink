@@ -1,5 +1,4 @@
 'use client';
-import Link from "next/link";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
